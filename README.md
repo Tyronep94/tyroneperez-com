@@ -24,9 +24,6 @@ Fill in `.env.local`, complete the Supabase setup below, and then run `pnpm dev`
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Browser-safe publishable/anon key; RLS protects data |
-| `SUPABASE_SERVICE_ROLE_KEY` | No | Reserved for future trusted maintenance code; Phase 1 never reads it |
-
-Never prefix the service-role key with `NEXT_PUBLIC_`, commit it, or expose it in browser code.
 
 ## Supabase project and database setup
 
@@ -68,8 +65,7 @@ pnpm start      # serve the production build
 1. Push this repository to a Git provider and import it into Vercel.
 2. Keep the detected framework as **Next.js** and the standard build command (`pnpm build`).
 3. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to Preview and Production environments.
-4. Do not add the service-role key unless a future server-only feature explicitly requires it.
-5. Deploy, then add the production URL to **Supabase → Authentication → URL Configuration** as the Site URL. Add the Vercel preview URL pattern to Redirect URLs if preview login testing is needed.
+4. Deploy, then add the production URL to **Supabase → Authentication → URL Configuration** as the Site URL. Add the Vercel preview URL pattern to Redirect URLs if preview login testing is needed.
 
 ## Connect tyroneperez.com later
 
