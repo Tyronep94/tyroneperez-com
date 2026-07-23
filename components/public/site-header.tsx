@@ -27,12 +27,18 @@ export function SiteHeader() {
           <small>Music · Photography</small>
         </Link>
         <nav className="desktop-public-nav" aria-label="Primary navigation">
-          {publicSite.nav.map((item) => (
+          {publicSite.nav.filter((item) => item.href !== "/contact").map((item) => (
             <Link key={item.href} href={item.href} aria-current={active(item.href) ? "page" : undefined}>
               {item.label}
             </Link>
           ))}
-          <Link href="/start" className="public-nav-cta">Start Your Project</Link>
+          <Link
+            href="/start"
+            className="public-nav-cta"
+            aria-current={active("/start") ? "page" : undefined}
+          >
+            Start Project
+          </Link>
         </nav>
         <button
           type="button"
@@ -51,12 +57,12 @@ export function SiteHeader() {
         aria-label="Mobile navigation"
         aria-hidden={!open}
       >
-        {publicSite.nav.map((item, index) => (
+        {publicSite.nav.filter((item) => item.href !== "/contact").map((item, index) => (
           <Link key={item.href} href={item.href} tabIndex={open ? 0 : -1} onClick={() => setOpen(false)}>
             <span>{String(index + 1).padStart(2, "0")}</span>{item.label}
           </Link>
         ))}
-        <Link href="/start" className="public-nav-cta" tabIndex={open ? 0 : -1} onClick={() => setOpen(false)}>Start Your Project</Link>
+        <Link href="/start" className="public-nav-cta" tabIndex={open ? 0 : -1} onClick={() => setOpen(false)}>Start Project</Link>
       </nav>
     </header>
   );

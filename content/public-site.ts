@@ -43,33 +43,33 @@ export const publicSite = {
 
 export const homeContent = {
   heroKicker: "Independent creative practice",
-  heroSupport: "Thoughtful production for the moments, music, and stories you want to carry forward.",
+  heroSupport: "Sound. Image. Story.",
   selectorHeading: "What are we creating?",
   paths: [
     {
       href: "/music",
       label: "Music Production",
-      line: "Shape the sound. Keep the feeling.",
+      line: "Sound, shaped with intention.",
       detail: "Recording, mixing, mastering, and full-song production.",
       mood: "music",
     },
     {
       href: "/photography",
       label: "Photography",
-      line: "Honest images, intentionally made.",
+      line: "Images that hold a feeling.",
       detail: "Portraits, milestones, brands, and gatherings.",
       mood: "photo",
     },
   ],
   selectedHeading: "Selected work",
-  selectedIntro: "A working preview of the stories this portfolio will hold. Replace each labeled study with final project media.",
-  introKicker: "One creative point of view",
-  introHeading: "Made with attention, from first conversation to final detail.",
-  introBody: "Tyrone Perez Creative brings music production and photography together through a calm, collaborative process. Every project begins by listening closely—then making purposeful choices that serve the story.",
+  selectedIntro: "Sound and image.",
+  introKicker: "About",
+  introHeading: "An artist working in sound and image.",
+  introBody: "Music and photography, shaped with attention.",
   introNote: "Personalize this introduction with Tyrone’s own background and creative philosophy before launch.",
   servicesHeading: "Ways to work together",
-  ctaHeading: "Bring the idea. We’ll find its clearest form.",
-  ctaBody: "A guided project inquiry is coming next. For now, explore the work or reach out directly.",
+  ctaHeading: "Start a project.",
+  ctaBody: "Bring the idea.",
 };
 
 export const musicContent = {
