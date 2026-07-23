@@ -1,6 +1,6 @@
-# Tyrone Perez Creative — Phase 1
+# Tyrone Perez Creative — Phase 2.1
 
-A private business-operations foundation for Tyrone Perez Creative. This phase includes a temporary public homepage, secure Supabase admin authentication, a responsive Today’s Agenda, client records, booking management, inquiry visibility, and a PostgreSQL/RLS foundation ready for later phases.
+A premium public brand website and private business-operations foundation for Tyrone Perez Creative. Phase 2.1 adds the complete public-facing visual experience while preserving the Phase 1 Supabase authentication, responsive admin dashboard, client records, booking management, inquiry visibility, and PostgreSQL/RLS foundation.
 
 ## Requirements
 
@@ -75,10 +75,84 @@ pnpm start      # serve the production build
 
 In Vercel, open the project’s **Settings → Domains**, add `tyroneperez.com` and optionally `www.tyroneperez.com`, then apply the DNS records Vercel provides at the domain registrar. Choose one canonical domain and redirect the other. After DNS is active, update the Supabase Site URL to `https://tyroneperez.com`. The app metadata already uses this production domain.
 
-## Phase 1 feature checklist
+## Phase 2.1 public website
+
+Phase 2.1 adds a shared editorial public layout with a responsive header, accessible mobile menu, footer, visible keyboard focus states, and reduced-motion support. Music and photography share the same warm-white, charcoal, and cognac brand system while using distinct moods: darker and studio-inspired for music, brighter and image-led for photography.
+
+### Public routes
+
+| Route | Purpose |
+| --- | --- |
+| `/` | Editorial homepage with creative pathways, selected work, services, and project CTA |
+| `/music` | Music services, placeholder biography, featured sound, process, and FAQs |
+| `/photography` | Photography services, placeholder biography, image grid, process, and FAQs |
+| `/portfolio` | Client-side All/Photography/Music filters over structured local project data |
+| `/portfolio/[slug]` | Static project detail pages with image- or audio-led layouts |
+| `/about` | Personal introduction, background, disciplines, approach, and values |
+| `/contact` | Direct contact options without a duplicate inquiry form |
+| `/start` | Polished Phase 2.2 guided-inquiry placeholder |
+| `/sitemap.xml` | Canonical public URL index |
+| `/robots.txt` | Public crawling rules with private admin/login exclusions |
+
+### Public layout and content
+
+- `app/(public)/layout.tsx` owns the public header, footer, skip link, and visual stylesheet. It is separate from `app/admin/layout.tsx`.
+- `components/public/` contains reusable public navigation, footer, CTA, service, media-placeholder, and portfolio-filter components.
+- `content/public-site.ts` is the single editing surface for public copy, services, FAQs, contact information, social links, and placeholder portfolio data.
+- `lib/seo.ts` creates consistent title, description, canonical, Open Graph, and X metadata.
+
+### Replace placeholder copy
+
+Edit `content/public-site.ts`. Items that specifically require Tyrone’s input are also labeled in the rendered site:
+
+1. Music production biography
+2. Photography biography
+3. Homepage personal introduction
+4. About-page introduction and creative background
+5. Contact email, social URLs, and response-time expectation
+6. Service wording that should reflect Tyrone’s exact process
+7. Portfolio titles, stories, client/artist credits, and descriptions
+
+The current copy does not invent awards, locations, years of experience, clients, credentials, testimonials, or production claims.
+
+### Replace placeholder media
+
+Abstract editorial blocks are intentionally used instead of unrelated stock photography. They are rendered by `components/public/media-placeholder.tsx` and clearly labeled for replacement.
+
+When approved media is ready:
+
+1. Add optimized files under `public/portfolio/`.
+2. Extend each item in `content/public-site.ts` with its media path and descriptive alt text.
+3. Replace `MediaPlaceholder` at the card/detail rendering boundary with `next/image` for photographs.
+4. Add accessible, user-initiated audio controls for music projects. Never autoplay audio.
+5. Replace the About portrait and Photography hero placeholders with approved images.
+
+### SEO configuration
+
+- Canonical origin: `https://tyroneperez.com`
+- Shared branded social card: `public/og.png`
+- Per-page metadata: page-level `metadata` exports using `publicMetadata`
+- Dynamic portfolio metadata: `generateMetadata` in `/portfolio/[slug]`
+- Public route index: `app/sitemap.ts`
+- Search-engine rules: `app/robots.ts`
+
+Change the canonical origin in `app/layout.tsx`, `lib/seo.ts`, `app/sitemap.ts`, and `app/robots.ts` if the production domain changes.
+
+### Responsive testing notes
+
+The public layout is designed around:
+
+- 390px mobile: stacked pathways, single-column services and portfolio, 44px+ controls, mobile menu
+- Tablet: two-column editorial layouts where useful
+- Standard laptop: full navigation and balanced content grids
+- Large desktop: capped container widths and fluid typography
+
+The public stylesheet uses responsive `clamp()` typography, constrained containers, `overflow: clip`, explicit mobile grids, `:focus-visible`, and `prefers-reduced-motion`. Test real replacement images again because their aspect ratios may differ from the placeholders.
+
+## Phase 1 admin feature checklist
 
 - [x] Next.js App Router, TypeScript, Tailwind CSS, and Vercel-compatible build
-- [x] Temporary public coming-soon homepage
+- [x] Public homepage now replaced by the Phase 2.1 brand experience
 - [x] Email/password login with no registration
 - [x] Session refresh, protected admin routes, admin allowlist, and logout
 - [x] Responsive desktop sidebar and mobile bottom navigation
@@ -96,6 +170,13 @@ In Vercel, open the project’s **Settings → Domains**, add `tyroneperez.com` 
 
 ```text
 app/
+  (public)/           # shared public layout and all public brand routes
+    music/
+    photography/
+    portfolio/
+    about/
+    contact/
+    start/
   admin/
     bookings/       # list, create, detail/edit, status actions
     clients/        # list, create, detail/edit, history
@@ -103,16 +184,19 @@ app/
     layout.tsx      # protected responsive admin shell
     page.tsx        # Today’s Agenda
   login/            # Supabase sign-in action and page
-  page.tsx          # temporary public homepage
 components/
   admin/            # navigation shell
   dashboard/        # agenda booking cards
   forms/            # reusable client, booking, and login forms
+  public/           # public header, footer, services, portfolio, and CTA components
+content/
+  public-site.ts    # editable public copy and placeholder project content
 lib/
   auth/             # admin authorization
   database/         # feature queries
   supabase/         # browser, server, and proxy clients
   utils/            # Pacific-time helpers
+  seo.ts             # public metadata helper
 supabase/
   migrations/       # production database setup
   seed.sql          # optional development-only examples
@@ -130,14 +214,18 @@ proxy.ts             # session refresh and route redirects
 
 All tables use UUID primary keys, timestamps, indexes, constraints, and automatic `updated_at` triggers. All private tables have RLS enabled. Access requires both an authenticated Supabase user and a matching `admin_users` record.
 
-## Known Phase 1 limitations
+## Known limitations
 
 - Admin accounts and service catalog changes are managed in Supabase, not through dashboard settings.
 - Inquiries are visible but do not yet have a full editing/conversion workflow.
 - Search is intentionally simple and optimized for a small creative-business dataset.
 - There are no automated end-to-end tests against a live Supabase project in the repository; live verification requires configured project credentials.
-- Payments, contracts, client accounts, uploads/file delivery, calendar sync, public inquiry forms, and the final portfolio are intentionally excluded.
+- Portfolio records and media remain curated local placeholders rather than Supabase-backed content.
+- The guided `/start` inquiry is a placeholder and does not submit data.
+- Contact email, social URLs, response expectations, personal biographies, and all portfolio credits require Tyrone’s final content.
+- There is no public service or portfolio administration in Phase 2.1.
+- Payments, contracts, client accounts, uploads/file delivery, calendar sync, invoices, and messaging remain intentionally excluded.
 
-## Recommended Phase 2
+## Recommended Phase 2.2
 
-Build the public services/portfolio experience and an inquiry intake workflow that creates client and inquiry records safely through a purpose-built public endpoint. Then add inquiry-to-booking conversion, service management, calendar views/sync, and notification preferences. Payments, contracts, and file delivery should remain separate scoped milestones.
+Build the guided `/start` inquiry experience with photography/music branching, accessible multi-step validation, spam protection, a secure server-only Supabase mutation, confirmation messaging, and admin inquiry detail/triage. Keep portfolio administration, service administration, inquiry-to-booking conversion, payments, contracts, and file delivery outside that milestone unless they are separately scoped.
