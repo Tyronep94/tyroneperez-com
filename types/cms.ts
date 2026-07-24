@@ -59,4 +59,56 @@ export type MediaAsset = {
   tags?: string[];
 };
 
+export type GalleryLayoutPreset =
+  | "editorial-grid"
+  | "masonry"
+  | "full-width-story"
+  | "alternating"
+  | "horizontal-rows"
+  | "featured-hero"
+  | "custom";
+
+export type GalleryPhotoWidth = "full" | "half" | "third";
+export type GalleryPhotoEmphasis = "natural" | "portrait" | "landscape";
+export type GalleryPhotoAlignment = "left" | "center" | "right";
+
+export type GalleryPhoto = {
+  id: string;
+  type: "photo";
+  assetId: string;
+  asset: MediaAsset;
+  width: GalleryPhotoWidth;
+  emphasis: GalleryPhotoEmphasis;
+  alignment: GalleryPhotoAlignment;
+  focalPoint: { x: number; y: number };
+  crop: "natural" | "cover";
+  featured: boolean;
+  hidden: boolean;
+  altText: string;
+  caption: string;
+};
+
+export type GallerySection =
+  | { id: string; type: "images"; layout: "image" | "full-width" | "pair" | "three"; items: GalleryPhoto[] }
+  | { id: string; type: "text"; heading: string; body: string }
+  | { id: string; type: "spacer"; size: "small" | "medium" | "large" }
+  | { id: string; type: "divider" }
+  | { id: string; type: "quote"; quote: string; attribution: string };
+
+export type GalleryLayout = {
+  version: 1;
+  preset: GalleryLayoutPreset;
+  sections: GallerySection[];
+};
+
+export type GallerySettings = {
+  location?: string;
+  shootDate?: string;
+  camera?: string;
+  lens?: string;
+  client?: string;
+  tags?: string[];
+  showCaptions?: boolean;
+};
+
 export const emptyDocument: RichTextNode = { type: "doc", content: [{ type: "paragraph" }] };

@@ -5,9 +5,10 @@ import { CtaBanner } from "@/components/public/cta-banner";
 import { MediaPlaceholder } from "@/components/public/media-placeholder";
 import { portfolioItems } from "@/content/public-site";
 import { publicMetadata } from "@/lib/seo";
-import { getPublishedPortfolioEntry } from "@/lib/database/cms";
+import { getPublishedGallery, getPublishedPortfolioEntry } from "@/lib/database/cms";
 import { RichContent } from "@/components/cms/rich-content";
 import { CmsImage } from "@/components/cms/cms-image";
+import { GalleryPage } from "@/components/public/gallery-page";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
@@ -30,6 +31,8 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
   const { slug } = await params;
   const cmsItem = await getPublishedPortfolioEntry(slug);
   if (cmsItem) {
+    const gallery = await getPublishedGallery(cmsItem.id);
+    if (gallery) return <GalleryPage entry={cmsItem} layout={gallery.layout} settings={gallery.settings} />;
     const mediaType = cmsItem.kind === "album" || cmsItem.kind === "song" ? "audio" : "image";
     return <main id="main-content" className={`project-page project-page--${mediaType}`}>
       <section className="project-hero"><div className="public-container"><Link href="/portfolio" className="public-text-link project-back">Back to portfolio</Link><div className="project-hero__copy"><p className="public-kicker">{cmsItem.category || "Selected work"}</p><h1>{cmsItem.title}</h1>{cmsItem.excerpt && <p>{cmsItem.excerpt}</p>}</div>{cmsItem.cover_asset ? <CmsImage asset={cmsItem.cover_asset} className="cms-project-cover" sizes="(max-width: 1320px) calc(100vw - 40px), 1280px" priority /> : <MediaPlaceholder item={{title:cmsItem.title,mediaType,format:"wide",palette:"noir"}} />}</div></section>

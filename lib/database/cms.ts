@@ -1,5 +1,5 @@
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
-import type { ContentEntry } from "@/types/cms";
+import type { ContentEntry, GalleryLayout, GallerySettings } from "@/types/cms";
 
 export async function getPublishedPortfolio(): Promise<ContentEntry[]> {
   if (!isSupabaseConfigured()) return [];
@@ -35,6 +35,22 @@ export async function getPublishedPortfolioEntry(slug: string): Promise<ContentE
     return null;
   }
   return data as ContentEntry | null;
+}
+
+export async function getPublishedGallery(contentId: string): Promise<{ layout: GalleryLayout; settings: GallerySettings } | null> {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("photography_gallery_publications")
+    .select("layout,settings")
+    .eq("content_id", contentId)
+    .maybeSingle();
+  if (error) {
+    // Keep legacy portfolio entries working before the photography migration is applied.
+    if (error.code !== "PGRST205" && error.code !== "42P01") console.error("Published gallery query failed:", error.message);
+    return null;
+  }
+  return data ? { layout: data.layout as GalleryLayout, settings: data.settings as GallerySettings } : null;
 }
 
 export async function getPublicCollections() {

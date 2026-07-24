@@ -22,7 +22,7 @@ export async function registerMedia(input: z.infer<typeof metadataSchema>) {
   const { admin, supabase } = await requireAdmin();
   const kind = input.mime_type.startsWith("image/") ? "image" : input.mime_type.startsWith("audio/") ? "audio" : input.mime_type.startsWith("video/") ? "video" : "document";
   const transformBase = input.public_url.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
-  const { error } = await supabase.from("media_assets").insert({
+  const { data, error } = await supabase.from("media_assets").insert({
     ...parsed.data,
     kind,
     uploaded_by: admin.id,
@@ -32,11 +32,11 @@ export async function registerMedia(input: z.infer<typeof metadataSchema>) {
       large: { width: 1920, url: `${transformBase}?width=1920&quality=88` },
       original: { width: input.width ?? 0, url: input.public_url },
     } : {},
-  });
+  }).select("*").single();
   if (error) return { ok: false, message: error.message };
   await supabase.from("cms_activity").insert({ actor_id: admin.id, action: "uploaded", entity_type: "media", summary: `Uploaded “${input.title}”` });
   revalidatePath("/admin/media");
-  return { ok: true };
+  return { ok: true, asset: data };
 }
 
 export async function deleteMedia(ids: string[]) {
