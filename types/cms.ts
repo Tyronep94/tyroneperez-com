@@ -69,23 +69,45 @@ export type GalleryLayoutPreset =
   | "custom";
 
 export type GalleryPhotoWidth = "full" | "half" | "third";
+export type GalleryPhotoSize = "small" | "medium" | "large" | "full";
 export type GalleryPhotoEmphasis = "natural" | "portrait" | "landscape";
 export type GalleryPhotoAlignment = "left" | "center" | "right";
+export type GallerySlotDimensions = {
+  desktopWidth: string;
+  tabletWidth: string;
+  mobileWidth: string;
+  aspectRatio: number;
+};
 
 export type GalleryPhoto = {
   id: string;
   type: "photo";
   assetId: string;
   asset: MediaAsset;
-  width: GalleryPhotoWidth;
+  /** Legacy layout value retained while saved drafts are normalized. */
+  width?: GalleryPhotoWidth;
+  size?: GalleryPhotoSize;
   emphasis: GalleryPhotoEmphasis;
   alignment: GalleryPhotoAlignment;
   focalPoint: { x: number; y: number };
   crop: "natural" | "cover";
+  /** A cover crop is honored only when it was explicitly selected in the editor. */
+  cropIntent?: "explicit";
   featured: boolean;
   hidden: boolean;
   altText: string;
   caption: string;
+  tags?: string[];
+  copyright?: string;
+  slotId?: string;
+  slotLabel?: string;
+  templateLocked?: boolean;
+  referenceAssetId?: string;
+  referenceAsset?: MediaAsset;
+  replacementAssetId?: string | null;
+  replacementAsset?: MediaAsset | null;
+  fitMode?: "contain" | "cover";
+  slotDimensions?: GallerySlotDimensions;
 };
 
 export type GallerySection =
@@ -97,6 +119,7 @@ export type GallerySection =
 
 export type GalleryLayout = {
   version: 1;
+  mode?: "template" | "freeform";
   preset: GalleryLayoutPreset;
   sections: GallerySection[];
 };

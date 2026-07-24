@@ -37,9 +37,13 @@ export default async function PhotographyGalleriesPage() {
           <div className="photography-gallery-card__copy">
             <div><p>{gallery.category || "Photography"}</p><h2><Link href={`/admin/photography/galleries/${gallery.id}`}>{gallery.title}</Link></h2></div>
             <dl><div><dt>Photos</dt><dd>{count}</dd></div><div><dt>Updated</dt><dd>{new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(new Date(gallery.updated_at))}</dd></div></dl>
+            <div className={`photography-gallery-card__status status-${gallery.status}`}>
+              <span>Publish status</span>
+              <strong>{gallery.status === "published" ? "Published" : "Draft — not public"}</strong>
+            </div>
             <div className="photography-gallery-card__actions">
-              <Link href={`/admin/photography/galleries/${gallery.id}`}>Edit</Link>
-              <Link href={`/preview/portfolio/${gallery.slug}`} target="_blank">Preview ↗</Link>
+              <Link className="photography-gallery-card__edit" href={`/admin/photography/galleries/${gallery.id}`}>Edit Photos</Link>
+              <Link className="photography-gallery-card__preview" href={`/preview/portfolio/${gallery.slug}`} target="_blank">Preview ↗</Link>
             </div>
           </div>
         </article>;

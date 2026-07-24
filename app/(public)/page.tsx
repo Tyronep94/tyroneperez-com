@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
+import { PageRuntime } from "@/components/public/page-runtime";
 import { homeContent } from "@/content/public-site";
+import { getPublishedWebsitePage } from "@/lib/database/website-pages";
 import { publicMetadata } from "@/lib/seo";
 
 export const metadata = publicMetadata(
@@ -9,7 +11,7 @@ export const metadata = publicMetadata(
   "/",
 );
 
-export default function HomePage() {
+export function HomePageView() {
   return (
     <main id="main-content" className="home-page">
       <div className="public-container home-page__frame">
@@ -85,4 +87,9 @@ export default function HomePage() {
       </div>
     </main>
   );
+}
+
+export default async function HomePage() {
+  const document = await getPublishedWebsitePage("home");
+  return <PageRuntime pageKey="home" document={document}><HomePageView /></PageRuntime>;
 }

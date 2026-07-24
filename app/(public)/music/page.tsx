@@ -1,8 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CtaBanner } from "@/components/public/cta-banner";
+import { PageRuntime } from "@/components/public/page-runtime";
 import { ServiceList } from "@/components/public/service-list";
 import { musicContent, portfolioItems } from "@/content/public-site";
+import { getPublishedWebsitePage } from "@/lib/database/website-pages";
 import { publicMetadata } from "@/lib/seo";
 
 export const metadata = publicMetadata(
@@ -11,7 +13,7 @@ export const metadata = publicMetadata(
   "/music",
 );
 
-export default function MusicPage() {
+export function MusicPageView() {
   const musicWork = portfolioItems.filter((item) => item.category === "Music").slice(0, 3);
   return (
     <main id="main-content" className="music-page">
@@ -124,4 +126,9 @@ export default function MusicPage() {
       <CtaBanner heading={musicContent.ctaHeading} />
     </main>
   );
+}
+
+export default async function MusicPage() {
+  const document = await getPublishedWebsitePage("music");
+  return <PageRuntime pageKey="music" document={document}><MusicPageView /></PageRuntime>;
 }

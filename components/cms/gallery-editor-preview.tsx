@@ -1,6 +1,6 @@
 "use client";
 
-import type { DragEvent, KeyboardEvent, MouseEvent } from "react";
+import { useEffect, useRef, type DragEvent, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import { GalleryPage } from "@/components/public/gallery-page";
 import type { ContentEntry, GalleryLayout, GallerySettings } from "@/types/cms";
 
@@ -13,6 +13,15 @@ type Props = {
   onDropPhoto: (sectionId: string, beforeId?: string) => void;
   onDragPhoto: (id: string) => void;
   onDragSection: (id: string) => void;
+  onPhotoMetrics?: (metrics: {
+    width: number;
+    height: number;
+    clipped: boolean;
+    anchorLeft: number;
+    anchorTop: number;
+  } | null) => void;
+  repositioningId?: string | null;
+  onReposition?: (id: string, focalPoint: { x: number; y: number }) => void;
 };
 
 function elementTarget(target: EventTarget | null) {
@@ -28,7 +37,70 @@ export function GalleryEditorPreview({
   onDropPhoto,
   onDragPhoto,
   onDragSection,
+  onPhotoMetrics,
+  repositioningId = null,
+  onReposition,
 }: Props) {
+  const interactionRoot = useRef<HTMLDivElement>(null);
+  const repositionSession = useRef<{
+    id: string;
+    x: number;
+    y: number;
+    focalX: number;
+    focalY: number;
+    photo: HTMLElement;
+  } | null>(null);
+
+  useEffect(() => {
+    const images = interactionRoot.current?.querySelectorAll<HTMLImageElement>(".gallery-photo img");
+    images?.forEach((image) => {
+      image.draggable = true;
+    });
+  }, [layout]);
+
+  useEffect(() => {
+    if (!selectedId || !onPhotoMetrics) {
+      onPhotoMetrics?.(null);
+      return;
+    }
+    const update = () => {
+      const photo = [...document.querySelectorAll<HTMLElement>("[data-gallery-photo-id]")]
+        .find((element) => element.dataset.galleryPhotoId === selectedId);
+      const image = photo?.querySelector("img");
+      const frame = photo?.querySelector<HTMLElement>(".gallery-photo__frame");
+      if (!image || !frame) return onPhotoMetrics(null);
+      const imageRect = image.getBoundingClientRect();
+      const frameRect = frame.getBoundingClientRect();
+      const canvasRect = interactionRoot.current?.closest<HTMLElement>(".visual-editor__canvas")?.getBoundingClientRect();
+      const style = getComputedStyle(frame);
+      const clipped = style.overflow === "hidden" && (
+        imageRect.top < frameRect.top - 0.5 || imageRect.bottom > frameRect.bottom + 0.5 ||
+        imageRect.left < frameRect.left - 0.5 || imageRect.right > frameRect.right + 0.5
+      );
+      onPhotoMetrics({
+        width: Math.round(imageRect.width),
+        height: Math.round(imageRect.height),
+        clipped,
+        anchorLeft: canvasRect
+          ? Math.max(190, Math.min(canvasRect.width - 190, frameRect.left - canvasRect.left + frameRect.width / 2))
+          : frameRect.left + frameRect.width / 2,
+        anchorTop: canvasRect ? Math.max(54, frameRect.top - canvasRect.top + 12) : frameRect.top,
+      });
+    };
+    const frame = requestAnimationFrame(update);
+    const observer = new ResizeObserver(update);
+    const preview = document.querySelector(".visual-preview-page");
+    if (preview) observer.observe(preview);
+    preview?.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      preview?.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [layout, onPhotoMetrics, selectedId]);
+
   const selectTarget = (target: EventTarget | null) => {
     const photo = elementTarget(target)?.closest<HTMLElement>("[data-gallery-photo-id]");
     if (photo?.dataset.galleryPhotoId) onSelect(photo.dataset.galleryPhotoId);
@@ -68,14 +140,53 @@ export function GalleryEditorPreview({
     onSelect(photo.dataset.galleryPhotoId);
   };
 
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (!repositioningId || !onReposition) return;
+    const photo = elementTarget(event.target)?.closest<HTMLElement>("[data-gallery-photo-id]");
+    if (photo?.dataset.galleryPhotoId !== repositioningId || photo.dataset.fitMode !== "cover") return;
+    const selected = layout.sections.flatMap((section) => section.type === "images" ? section.items : [])
+      .find((item) => item.id === repositioningId);
+    if (!selected) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    repositionSession.current = {
+      id: repositioningId,
+      x: event.clientX,
+      y: event.clientY,
+      focalX: selected.focalPoint.x,
+      focalY: selected.focalPoint.y,
+      photo,
+    };
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const session = repositionSession.current;
+    if (!session || !onReposition) return;
+    const rect = session.photo.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, session.focalX - ((event.clientX - session.x) / Math.max(1, rect.width)) * 100));
+    const y = Math.max(0, Math.min(100, session.focalY - ((event.clientY - session.y) / Math.max(1, rect.height)) * 100));
+    onReposition(session.id, { x: Math.round(x), y: Math.round(y) });
+  };
+
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (!repositionSession.current) return;
+    repositionSession.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
+
   return (
     <div
-      className="gallery-editor-interactions"
+      ref={interactionRoot}
+      className={`gallery-editor-interactions${repositioningId ? " is-repositioning" : ""}`}
       onClick={(event: MouseEvent<HTMLDivElement>) => selectTarget(event.target)}
       onKeyDown={handleKeyDown}
       onDragStart={handleDragStart}
       onDragOver={(event) => event.preventDefault()}
       onDrop={handleDrop}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     >
       <GalleryPage entry={entry} layout={layout} settings={settings} editing selectedId={selectedId} />
     </div>

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/admin";
+import { normalizeGalleryLayout } from "@/lib/gallery-layout";
 import type { GalleryLayout, MediaAsset } from "@/types/cms";
 
 const galleryMetaSchema = z.object({
@@ -29,15 +30,31 @@ const photoSchema = z.object({
   id: z.string().min(1).max(100),
   type: z.literal("photo"),
   assetId: z.string().uuid(),
-  width: z.enum(["full", "half", "third"]),
+  width: z.enum(["full", "half", "third"]).optional(),
+  size: z.enum(["small", "medium", "large", "full"]),
   emphasis: z.enum(["natural", "portrait", "landscape"]),
   alignment: z.enum(["left", "center", "right"]),
   focalPoint: z.object({ x: z.number().min(0).max(100), y: z.number().min(0).max(100) }),
   crop: z.enum(["natural", "cover"]),
+  cropIntent: z.literal("explicit").optional(),
   featured: z.boolean(),
   hidden: z.boolean(),
   altText: z.string().max(500),
   caption: z.string().max(1000),
+  tags: z.array(z.string().max(50)).max(30).optional(),
+  copyright: z.string().max(300).optional(),
+  slotId: z.string().min(1).max(120).optional(),
+  slotLabel: z.string().min(1).max(120).optional(),
+  templateLocked: z.boolean().optional(),
+  referenceAssetId: z.string().uuid().optional(),
+  replacementAssetId: z.string().uuid().nullable().optional(),
+  fitMode: z.enum(["contain", "cover"]).optional(),
+  slotDimensions: z.object({
+    desktopWidth: z.string().min(1).max(30),
+    tabletWidth: z.string().min(1).max(30),
+    mobileWidth: z.string().min(1).max(30),
+    aspectRatio: z.number().positive().max(20),
+  }).optional(),
 });
 
 const sectionSchema = z.discriminatedUnion("type", [
@@ -50,6 +67,7 @@ const sectionSchema = z.discriminatedUnion("type", [
 
 const layoutSchema = z.object({
   version: z.literal(1),
+  mode: z.enum(["template", "freeform"]).optional(),
   preset: z.enum(["editorial-grid", "masonry", "full-width-story", "alternating", "horizontal-rows", "featured-hero", "custom"]),
   sections: z.array(sectionSchema).max(250),
 });
@@ -61,24 +79,35 @@ async function hydrateLayout(layout: z.infer<typeof layoutSchema>, assets: Media
   return {
     ...layout,
     sections: layout.sections.map((section) => section.type === "images"
-      ? { ...section, items: section.items.flatMap((photo) => {
-        const asset = byId.get(photo.assetId);
-        return asset ? [{ ...photo, asset }] : [];
+      ? { ...section, items: section.items.map((photo) => {
+        const asset = byId.get(photo.assetId)!;
+        const referenceAsset = photo.referenceAssetId ? byId.get(photo.referenceAssetId)! : asset;
+        const replacementAsset = photo.replacementAssetId ? byId.get(photo.replacementAssetId) : null;
+        return { ...photo, asset, referenceAsset, replacementAsset };
       }) }
       : section),
   } as GalleryLayout;
 }
 
 async function validateAndHydrate(layoutInput: GalleryLayout) {
-  const parsed = layoutSchema.safeParse(layoutInput);
+  const parsed = layoutSchema.safeParse(normalizeGalleryLayout(layoutInput));
   if (!parsed.success) return { error: "The gallery layout is invalid." } as const;
-  const assetIds = [...new Set(parsed.data.sections.flatMap((section) => section.type === "images" ? section.items.map((photo) => photo.assetId) : []))];
+  const assetIds = [...new Set(parsed.data.sections.flatMap((section) => section.type === "images"
+    ? section.items.flatMap((photo) => [photo.assetId, photo.referenceAssetId, photo.replacementAssetId].filter((id): id is string => Boolean(id)))
+    : []))];
   const { supabase } = await requireAdmin();
   const { data, error } = assetIds.length
     ? await supabase.from("media_assets").select("*").in("id", assetIds)
     : { data: [], error: null };
   if (error) return { error: error.message } as const;
-  return { layout: await hydrateLayout(parsed.data, (data ?? []) as MediaAsset[]) } as const;
+  const assets = (data ?? []) as MediaAsset[];
+  const resolvedIds = new Set(assets.map((asset) => asset.id));
+  if (assetIds.some((assetId) => !resolvedIds.has(assetId))) {
+    return {
+      error: "One or more gallery photos could not be found in the media library. The draft was not changed.",
+    } as const;
+  }
+  return { layout: await hydrateLayout(parsed.data, assets) } as const;
 }
 
 export async function createPhotographyGallery(formData: FormData) {

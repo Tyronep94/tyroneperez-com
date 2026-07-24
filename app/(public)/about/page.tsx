@@ -1,5 +1,7 @@
 import { CtaBanner } from "@/components/public/cta-banner";
+import { PageRuntime } from "@/components/public/page-runtime";
 import { aboutContent } from "@/content/public-site";
+import { getPublishedWebsitePage } from "@/lib/database/website-pages";
 import { publicMetadata } from "@/lib/seo";
 
 export const metadata = publicMetadata(
@@ -8,7 +10,7 @@ export const metadata = publicMetadata(
   "/about",
 );
 
-export default function AboutPage() {
+export function AboutPageView() {
   return (
     <main id="main-content">
       <section className="about-hero">
@@ -66,4 +68,9 @@ export default function AboutPage() {
       <CtaBanner heading={aboutContent.ctaHeading} />
     </main>
   );
+}
+
+export default async function AboutPage() {
+  const document = await getPublishedWebsitePage("about");
+  return <PageRuntime pageKey="about" document={document}><AboutPageView /></PageRuntime>;
 }

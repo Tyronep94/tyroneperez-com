@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { PageRuntime } from "@/components/public/page-runtime";
 import { contactContent, publicSite } from "@/content/public-site";
+import { getPublishedWebsitePage } from "@/lib/database/website-pages";
 import { publicMetadata } from "@/lib/seo";
 
 export const metadata = publicMetadata(
@@ -8,7 +10,7 @@ export const metadata = publicMetadata(
   "/contact",
 );
 
-export default function ContactPage() {
+export function ContactPageView() {
   return (
     <main id="main-content">
       <section className="contact-page">
@@ -39,4 +41,9 @@ export default function ContactPage() {
       </section>
     </main>
   );
+}
+
+export default async function ContactPage() {
+  const document = await getPublishedWebsitePage("contact");
+  return <PageRuntime pageKey="contact" document={document}><ContactPageView /></PageRuntime>;
 }

@@ -4,7 +4,10 @@ export function CmsImage({ asset, className, sizes = "100vw", priority = false }
   const candidates = ["thumbnail", "medium", "large"] as const;
   const srcSet = candidates.map(key => {
     const variant = asset.variants?.[key];
-    return variant?.url ? `${variant.url} ${variant.width}w` : null;
+    if (!variant?.url || !asset.width || !asset.height) return null;
+    const height = Math.max(1, Math.round(variant.width * asset.height / asset.width));
+    const separator = variant.url.includes("?") ? "&" : "?";
+    return `${variant.url}${separator}height=${height}&resize=contain ${variant.width}w`;
   }).filter(Boolean).join(", ");
   // Supabase render URLs provide the generated variants; srcSet lets the browser choose responsively.
   // eslint-disable-next-line @next/next/no-img-element

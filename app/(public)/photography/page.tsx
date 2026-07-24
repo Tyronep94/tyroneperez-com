@@ -1,8 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { CtaBanner } from "@/components/public/cta-banner";
+import { PageRuntime } from "@/components/public/page-runtime";
 import { ServiceList } from "@/components/public/service-list";
 import { photographyContent, portfolioItems } from "@/content/public-site";
+import { getPublishedWebsitePage } from "@/lib/database/website-pages";
 import { publicMetadata } from "@/lib/seo";
 
 export const metadata = publicMetadata(
@@ -11,7 +13,7 @@ export const metadata = publicMetadata(
   "/photography",
 );
 
-export default function PhotographyPage() {
+export function PhotographyPageView() {
   const photoWork = portfolioItems.filter((item) => item.category === "Photography").slice(0, 3);
   const galleryImages = [
     { src: "/images/home-photography.png", alt: "Couple photographed at a coastal overlook" },
@@ -122,4 +124,9 @@ export default function PhotographyPage() {
       <CtaBanner heading={photographyContent.ctaHeading} />
     </main>
   );
+}
+
+export default async function PhotographyPage() {
+  const document = await getPublishedWebsitePage("photography");
+  return <PageRuntime pageKey="photography" document={document}><PhotographyPageView /></PageRuntime>;
 }
