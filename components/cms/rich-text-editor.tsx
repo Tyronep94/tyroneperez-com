@@ -17,7 +17,7 @@ export function RichTextEditor({ value, onChange }: Props) {
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit,
+      StarterKit.configure({ link: false }),
       Image.configure({ allowBase64: false }),
       Link.configure({ openOnClick: false, autolink: true }),
       Youtube.configure({ controls: true, nocookie: true }),
