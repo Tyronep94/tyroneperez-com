@@ -222,6 +222,74 @@ All tables use UUID primary keys, timestamps, indexes, constraints, and automati
 - There is no public service or portfolio administration in Phase 2.1.
 - Payments, contracts, client accounts, uploads/file delivery, calendar sync, invoices, and messaging remain intentionally excluded.
 
+## Advanced CMS (Part 16)
+
+Part 16 adds a database-backed creative studio without removing the existing local public-content fallback.
+Apply `supabase/migrations/202607230001_advanced_cms.sql` after the Phase 1 migration before opening the
+new CMS routes.
+
+### CMS routes
+
+- `/admin/content`: portfolio, page, album, and song entries with draft, scheduled, published, and archived states
+- `/admin/content/new`: structured rich-content editor with local recovery, server autosave, preview, publishing, and SEO controls
+- `/admin/content/[id]/history`: read-only revision history and restore-ready architecture
+- `/admin/media`: drag-and-drop multi-upload, search, filtering, sorting, bulk deletion, usage warnings, and copy helpers
+- `/admin/collections`: reusable portfolio and media collection taxonomy
+- `/admin/search`: global results across content, media, clients, bookings, and services
+- `/admin/analytics`: live business/storage/activity metrics plus clearly identified provider placeholders
+- `/preview/portfolio/[slug]`: protected draft rendering using the public portfolio composition
+
+Published CMS portfolio entries automatically populate `/portfolio`, `/portfolio/[slug]`, and the
+sitemap. Existing local portfolio entries remain visible as a safe fallback and are replaced by CMS
+entries with the same slug.
+
+### Rich content and safety
+
+Rich text is stored as validated TipTap JSON rather than executable HTML. The public renderer supports
+headings, emphasis, safe links, lists, quotes, images, YouTube embeds, code blocks, and dividers. Unsafe
+link schemes are rejected when rendering. Draft previews require an authenticated `admin_users` record
+and are marked `noindex`.
+
+### Publishing behavior
+
+- **Save draft** keeps content private.
+- **Preview draft** opens the protected public composition.
+- **Publish** makes the entry publicly queryable.
+- **Unpublish** returns it to draft state.
+- **Schedule** stores the Pacific-time selection as UTC. RLS and public queries expose scheduled content
+  only when its scheduled timestamp has passed, so no service-role key or external cron is required.
+- Drafts autosave to Supabase after a short pause. A local browser recovery copy protects edits during
+  refreshes and temporary network failures.
+
+### Media optimization
+
+The `cms-media` Supabase Storage bucket is public-read/admin-write. Upload registration stores the
+original plus thumbnail (320px), medium (960px), and large (1920px) Supabase render URLs. `CmsImage`
+emits responsive `srcset` candidates, allowing the browser to choose an appropriate generated size.
+The original object remains unchanged. Deletion is blocked when an asset is registered as a cover or
+social image; `content_asset_usage` is ready to track additional body placements.
+
+### Database objects added
+
+- `content_entries`, `content_revisions`, and `cms_activity`
+- `media_assets`, `content_asset_usage`, `media_tags`, and `media_collections`
+- `collections`, `content_collections`, and `tags`
+- `cms-media` Storage bucket and admin-only mutation policies
+- publishing, search, activity, revision, asset-usage, and updated-timestamp indexes/triggers
+
+All CMS mutation policies require an authenticated user listed in `admin_users`. Anonymous access is
+limited to published (or due scheduled) content, collection metadata, and public media. Drafts,
+revisions, activity, tags, and private business data remain inaccessible.
+
+### Current CMS limitations
+
+- Revision restore is intentionally read-only in this release; complete snapshots are stored and the
+  interface clearly labels restore as future functionality.
+- Most-played audio, per-photo views, and contact-form activity require future analytics/event providers;
+  the analytics dashboard explains these empty integrations rather than presenting invented data.
+- Rich-content images inserted by URL are safely rendered but only cover/social selections currently
+  increment the asset usage count automatically.
+
 ## Recommended Phase 2.2
 
 Build the guided `/start` inquiry experience with photography/music branching, accessible multi-step validation, spam protection, a secure server-only Supabase mutation, confirmation messaging, and admin inquiry detail/triage. Keep portfolio administration, service administration, inquiry-to-booking conversion, payments, contracts, and file delivery outside that milestone unless they are separately scoped.
