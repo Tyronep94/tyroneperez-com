@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { PageRuntime } from "@/components/public/page-runtime";
+import { TemplateImage } from "@/components/public/template-image";
 import { homeContent } from "@/content/public-site";
 import { getPublishedWebsitePage } from "@/lib/database/website-pages";
 import { publicMetadata } from "@/lib/seo";
@@ -15,14 +15,14 @@ export function HomePageView() {
   return (
     <main id="main-content" className="home-page">
       <div className="public-container home-page__frame">
-        <section className="home-hero" aria-labelledby="home-hero-title">
-          <Image
+        <section className="home-hero" aria-labelledby="home-hero-title" data-media-container>
+          <TemplateImage
             className="home-hero__image"
             src="/images/home-hero.png"
             alt="Music producer working quietly in a dark studio"
-            fill
+            width={1672}
+            height={941}
             priority
-            sizes="(max-width: 620px) calc(100vw - 30px), (max-width: 1360px) calc(100vw - 64px), 1280px"
           />
           <div className="home-hero__copy">
             <p className="public-kicker">{homeContent.heroKicker}</p>
@@ -46,8 +46,9 @@ export function HomePageView() {
                 href={path.href}
                 className={`home-feature home-feature--${path.mood}`}
                 key={path.href}
+                data-media-container
               >
-                <Image
+                <TemplateImage
                   className="home-feature__image"
                   src={isMusic ? "/images/home-music.png" : "/images/home-photography.png"}
                   alt={
@@ -55,8 +56,8 @@ export function HomePageView() {
                       ? "Producer seated at a music studio workstation"
                       : "Couple photographed at a coastal overlook"
                   }
-                  fill
-                  sizes="(max-width: 620px) calc(100vw - 30px), (max-width: 1360px) calc((100vw - 80px) / 2), 632px"
+                  width={1672}
+                  height={941}
                 />
                 <div className="home-feature__label">
                   <h2>{path.label}</h2>

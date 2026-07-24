@@ -11,8 +11,12 @@ export type WebsiteSlotLayout = {
   marginBottom?: string;
   padding?: string;
   textAlign?: "left" | "center" | "right";
-  objectFit?: "contain" | "cover";
+  /** "cover" is a legacy persisted value and is rendered as natural proportions. */
+  objectFit?: "contain" | "cover" | "manual";
   objectPosition?: string;
+  manualZoom?: number;
+  manualX?: number;
+  manualY?: number;
 };
 
 export type WebsiteSlotOverride = {

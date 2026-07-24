@@ -67,7 +67,10 @@ export function normalizeGalleryPhoto(
     referenceAsset,
     replacementAssetId: photo.replacementAssetId ?? null,
     replacementAsset,
-    fitMode: photo.fitMode ?? "contain",
+    // "cover" is retained in the persisted type for backward compatibility,
+    // but only an explicit manual crop may clip a photograph.
+    fitMode: photo.fitMode === "manual" ? "manual" : "contain",
+    manualCrop: photo.manualCrop ?? { zoom: 1, x: 0, y: 0 },
     slotDimensions: photo.slotDimensions ?? defaultSlotDimensions({ ...photo, referenceAsset }, size),
   };
 }

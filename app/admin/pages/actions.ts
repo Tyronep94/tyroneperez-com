@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/admin";
 import type { MediaAsset } from "@/types/cms";
+import { inspectWebsiteDocumentMedia } from "@/lib/media-integrity";
 import { websitePageMeta, websitePageKeys, type WebsitePageDocument, type WebsitePageKey } from "@/types/website-editor";
 
 const cssValue = z.string().max(80).regex(/^[a-z0-9.%(),\s+\-/]*$/i).optional();
@@ -14,8 +15,11 @@ const layoutSchema = z.object({
   marginBottom: cssValue,
   padding: cssValue,
   textAlign: z.enum(["left", "center", "right"]).optional(),
-  objectFit: z.enum(["contain", "cover"]).optional(),
+  objectFit: z.enum(["contain", "cover", "manual"]).optional(),
   objectPosition: z.string().max(40).regex(/^[a-z0-9.%\s-]*$/i).optional(),
+  manualZoom: z.number().min(0.5).max(4).optional(),
+  manualX: z.number().min(-100).max(100).optional(),
+  manualY: z.number().min(-100).max(100).optional(),
 }).optional();
 const slotSchema = z.object({
   id: z.string().min(1).max(120),
@@ -75,6 +79,14 @@ export async function publishWebsitePage(pageKey: WebsitePageKey, input: Website
   const validation = await validateDocument(pageKey, input);
   if ("error" in validation) return { ok: false, message: validation.error };
   const { admin, supabase } = await requireAdmin();
+  const integrityIssues = await inspectWebsiteDocumentMedia(supabase, validation.document);
+  if (integrityIssues.length) {
+    const issue = integrityIssues[0];
+    return {
+      ok: false,
+      message: `Publish blocked: ${issue.filename} is missing from storage in ${issue.pageKey}:${issue.slotId}. Replace or remove that media before publishing.`,
+    };
+  }
   const current = await supabase.from("website_page_publications").select("version").eq("page_key", pageKey).maybeSingle();
   const { error } = await supabase.from("website_page_publications").upsert({
     page_key: pageKey,

@@ -51,8 +51,17 @@ export type MediaAsset = {
   mime_type: string;
   width: number | null;
   height: number | null;
+  aspect_ratio?: number | null;
+  orientation?: "landscape" | "portrait" | "square" | null;
+  object_status?: "available" | "missing" | "unknown";
+  object_checked_at?: string | null;
   file_size: number;
-  variants: Record<string, { width: number; url?: string }>;
+  variants: Record<string, {
+    width?: number;
+    url?: string;
+    aspect_ratio?: number | null;
+    orientation?: "landscape" | "portrait" | "square" | null;
+  }>;
   created_at: string;
   updated_at: string;
   usage_count?: number;
@@ -106,7 +115,13 @@ export type GalleryPhoto = {
   referenceAsset?: MediaAsset;
   replacementAssetId?: string | null;
   replacementAsset?: MediaAsset | null;
-  fitMode?: "contain" | "cover";
+  /** "cover" is a legacy persisted value and is normalized to natural proportions. */
+  fitMode?: "contain" | "cover" | "manual";
+  manualCrop?: {
+    zoom: number;
+    x: number;
+    y: number;
+  };
   slotDimensions?: GallerySlotDimensions;
 };
 

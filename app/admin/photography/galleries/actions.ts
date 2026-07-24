@@ -48,7 +48,12 @@ const photoSchema = z.object({
   templateLocked: z.boolean().optional(),
   referenceAssetId: z.string().uuid().optional(),
   replacementAssetId: z.string().uuid().nullable().optional(),
-  fitMode: z.enum(["contain", "cover"]).optional(),
+  fitMode: z.enum(["contain", "cover", "manual"]).optional(),
+  manualCrop: z.object({
+    zoom: z.number().min(0.5).max(4),
+    x: z.number().min(-100).max(100),
+    y: z.number().min(-100).max(100),
+  }).optional(),
   slotDimensions: z.object({
     desktopWidth: z.string().min(1).max(30),
     tabletWidth: z.string().min(1).max(30),

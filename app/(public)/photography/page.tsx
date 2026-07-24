@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { CtaBanner } from "@/components/public/cta-banner";
 import { PageRuntime } from "@/components/public/page-runtime";
+import { TemplateImage } from "@/components/public/template-image";
 import { ServiceList } from "@/components/public/service-list";
 import { photographyContent, portfolioItems } from "@/content/public-site";
 import { getPublishedWebsitePage } from "@/lib/database/website-pages";
@@ -16,9 +16,9 @@ export const metadata = publicMetadata(
 export function PhotographyPageView() {
   const photoWork = portfolioItems.filter((item) => item.category === "Photography").slice(0, 3);
   const galleryImages = [
-    { src: "/images/home-photography.png", alt: "Couple photographed at a coastal overlook" },
-    { src: "/images/photography-portrait.png", alt: "Editorial portrait in a modern architectural setting" },
-    { src: "/images/photography-worship.png", alt: "Documentary photograph of a worship gathering" },
+    { src: "/images/home-photography.png", alt: "Couple photographed at a coastal overlook", width: 1672, height: 941 },
+    { src: "/images/photography-portrait.png", alt: "Editorial portrait in a modern architectural setting", width: 1536, height: 1024 },
+    { src: "/images/photography-worship.png", alt: "Documentary photograph of a worship gathering", width: 1672, height: 941 },
   ];
 
   return (
@@ -33,14 +33,13 @@ export function PhotographyPageView() {
               Start a photo project <span aria-hidden="true">→</span>
             </Link>
           </div>
-          <div className="service-page-hero__media">
-            <Image
+          <div className="service-page-hero__media" data-media-container>
+            <TemplateImage
               src="/images/home-photography.png"
               alt="Couple photographed at a coastal overlook"
-              fill
+              width={1672}
+              height={941}
               priority
-              loading="eager"
-              sizes="(max-width: 880px) calc(100vw - 64px), (max-width: 1360px) 52vw, 680px"
             />
           </div>
         </div>
@@ -75,12 +74,12 @@ export function PhotographyPageView() {
           <div className="service-gallery__grid">
             {photoWork.map((item, index) => (
               <Link href={`/portfolio/${item.slug}`} key={item.slug} className="service-gallery__item">
-                <div className="service-gallery__image">
-                  <Image
+                <div className="service-gallery__image" data-media-container>
+                  <TemplateImage
                     src={galleryImages[index].src}
                     alt={galleryImages[index].alt}
-                    fill
-                    sizes="(max-width: 620px) calc(100vw - 30px), (max-width: 1360px) 32vw, 416px"
+                    width={galleryImages[index].width}
+                    height={galleryImages[index].height}
                   />
                 </div>
                 <div>

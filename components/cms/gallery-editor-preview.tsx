@@ -21,7 +21,7 @@ type Props = {
     anchorTop: number;
   } | null) => void;
   repositioningId?: string | null;
-  onReposition?: (id: string, focalPoint: { x: number; y: number }) => void;
+  onManualReposition?: (id: string, manualCrop: { zoom: number; x: number; y: number }) => void;
 };
 
 function elementTarget(target: EventTarget | null) {
@@ -39,15 +39,14 @@ export function GalleryEditorPreview({
   onDragSection,
   onPhotoMetrics,
   repositioningId = null,
-  onReposition,
+  onManualReposition,
 }: Props) {
   const interactionRoot = useRef<HTMLDivElement>(null);
   const repositionSession = useRef<{
     id: string;
     x: number;
     y: number;
-    focalX: number;
-    focalY: number;
+    zoom: number;
     photo: HTMLElement;
   } | null>(null);
 
@@ -141,9 +140,9 @@ export function GalleryEditorPreview({
   };
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (!repositioningId || !onReposition) return;
+    if (!repositioningId) return;
     const photo = elementTarget(event.target)?.closest<HTMLElement>("[data-gallery-photo-id]");
-    if (photo?.dataset.galleryPhotoId !== repositioningId || photo.dataset.fitMode !== "cover") return;
+    if (photo?.dataset.galleryPhotoId !== repositioningId || photo.dataset.fitMode !== "manual") return;
     const selected = layout.sections.flatMap((section) => section.type === "images" ? section.items : [])
       .find((item) => item.id === repositioningId);
     if (!selected) return;
@@ -153,19 +152,22 @@ export function GalleryEditorPreview({
       id: repositioningId,
       x: event.clientX,
       y: event.clientY,
-      focalX: selected.focalPoint.x,
-      focalY: selected.focalPoint.y,
+      zoom: selected.manualCrop?.zoom ?? 1,
       photo,
     };
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const session = repositionSession.current;
-    if (!session || !onReposition) return;
+    if (!session) return;
     const rect = session.photo.getBoundingClientRect();
-    const x = Math.max(0, Math.min(100, session.focalX - ((event.clientX - session.x) / Math.max(1, rect.width)) * 100));
-    const y = Math.max(0, Math.min(100, session.focalY - ((event.clientY - session.y) / Math.max(1, rect.height)) * 100));
-    onReposition(session.id, { x: Math.round(x), y: Math.round(y) });
+    const selected = layout.sections.flatMap((section) => section.type === "images" ? section.items : [])
+      .find((item) => item.id === session.id);
+    const x = Math.max(-100, Math.min(100, (selected?.manualCrop?.x ?? 0) + ((event.clientX - session.x) / Math.max(1, rect.width)) * 100));
+    const y = Math.max(-100, Math.min(100, (selected?.manualCrop?.y ?? 0) + ((event.clientY - session.y) / Math.max(1, rect.height)) * 100));
+    session.x = event.clientX;
+    session.y = event.clientY;
+    onManualReposition?.(session.id, { zoom: session.zoom, x, y });
   };
 
   const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {

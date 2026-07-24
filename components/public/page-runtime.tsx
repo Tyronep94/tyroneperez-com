@@ -28,6 +28,8 @@ type OriginalElementState = {
   src: string | null;
   srcset: string | null;
   alt: string | null;
+  width: string | null;
+  height: string | null;
 };
 
 function slotType(element: HTMLElement): WebsiteSlotType {
@@ -65,29 +67,106 @@ function applyText(element: HTMLElement, text: string) {
   });
 }
 
-function applyOverride(element: HTMLElement, override?: WebsiteSlotOverride) {
-  if (!override) return;
+function applyNaturalImageGeometry(
+  image: HTMLImageElement,
+  frame: HTMLElement,
+  dimensions?: { width: number; height: number },
+) {
+  frame.classList.remove("page-photo-frame--manual");
+  frame.classList.add("page-photo-frame--natural");
+  frame.dataset.pagePhotoDisplay = "natural";
+  frame.style.setProperty("height", "auto", "important");
+  frame.style.setProperty("min-height", "0", "important");
+  frame.style.setProperty("max-height", "none", "important");
+  frame.style.setProperty("aspect-ratio", "auto", "important");
+  frame.style.setProperty("overflow", "visible", "important");
+  if (dimensions) {
+    image.width = dimensions.width;
+    image.height = dimensions.height;
+  }
+  const syncIntrinsicDimensions = () => {
+    if (frame.dataset.pagePhotoDisplay === "natural" && image.naturalWidth && image.naturalHeight) {
+      image.width = image.naturalWidth;
+      image.height = image.naturalHeight;
+    }
+  };
+  if (image.complete) syncIntrinsicDimensions();
+  else image.addEventListener("load", syncIntrinsicDimensions, { once: true });
+}
+
+function applyNaturalContainer(container?: HTMLElement | null) {
+  if (!container) return;
+  container.classList.remove("page-media-container--manual");
+  container.classList.add("page-media-container--natural");
+  container.dataset.pagePhotoDisplay = "natural";
+  container.style.setProperty("height", "auto", "important");
+  container.style.setProperty("min-height", "0", "important");
+  container.style.setProperty("max-height", "none", "important");
+  container.style.setProperty("aspect-ratio", "auto", "important");
+  container.style.setProperty("overflow", "visible", "important");
+}
+
+function applyOverride(element: HTMLElement, override?: WebsiteSlotOverride, mediaContainer?: HTMLElement | null) {
+  if (!override) {
+    if (element instanceof HTMLImageElement && element.parentElement) {
+      applyNaturalImageGeometry(element, element.parentElement);
+      applyNaturalContainer(mediaContainer);
+    }
+    return;
+  }
   if (override.type === "media" && element instanceof HTMLImageElement) {
-    const src = override.asset?.variants?.large?.url ?? override.asset?.public_url;
+    // Use the original public object so a replacement never inherits a
+    // fixed-size or cropped derivative from the template/image provider.
+    const src = override.asset?.public_url;
     if (src) {
       element.src = src;
       element.removeAttribute("srcset");
     }
+    if (override.asset?.width) element.width = override.asset.width;
+    if (override.asset?.height) element.height = override.asset.height;
     if (override.alt !== undefined) element.alt = override.alt;
   } else {
     if (override.text !== undefined) applyText(element, override.text);
     if (override.href !== undefined && element instanceof HTMLAnchorElement) element.href = override.href;
   }
-  if (override.layout) {
+  if (override.layout || (override.type === "media" && element instanceof HTMLImageElement)) {
+    const layout = override.layout ?? {};
+    const displayMode = layout.objectFit === "manual" ? "manual" : "natural";
+    const frame = element.parentElement;
+    if (element instanceof HTMLImageElement && frame) {
+      frame.classList.remove("page-photo-frame--natural", "page-photo-frame--manual");
+      if (displayMode === "natural") {
+        applyNaturalImageGeometry(
+          element,
+          frame,
+          override.asset?.width && override.asset.height
+            ? { width: override.asset.width, height: override.asset.height }
+            : undefined,
+        );
+        applyNaturalContainer(mediaContainer);
+      } else {
+        frame.classList.add("page-photo-frame--manual");
+        frame.dataset.pagePhotoDisplay = "manual";
+        if (mediaContainer) {
+          mediaContainer.classList.remove("page-media-container--natural");
+          mediaContainer.classList.add("page-media-container--manual");
+          mediaContainer.dataset.pagePhotoDisplay = "manual";
+        }
+      }
+    }
     Object.assign(element.style, {
-      width: override.layout.width ?? "",
-      maxWidth: override.layout.maxWidth ?? "",
-      marginTop: override.layout.marginTop ?? "",
-      marginBottom: override.layout.marginBottom ?? "",
-      padding: override.layout.padding ?? "",
-      textAlign: override.layout.textAlign ?? "",
-      objectFit: override.layout.objectFit ?? "",
-      objectPosition: override.layout.objectPosition ?? "",
+      width: layout.width ?? "",
+      maxWidth: layout.maxWidth ?? "",
+      marginTop: layout.marginTop ?? "",
+      marginBottom: layout.marginBottom ?? "",
+      padding: layout.padding ?? "",
+      textAlign: layout.textAlign ?? "",
+      objectFit: "contain",
+      objectPosition: "center",
+      transform: displayMode === "manual"
+        ? `translate(${layout.manualX ?? 0}%, ${layout.manualY ?? 0}%) scale(${layout.manualZoom ?? 1})`
+        : "",
+      transformOrigin: displayMode === "manual" ? "center" : "",
     });
   }
 }
@@ -104,6 +183,8 @@ function captureOriginalState(element: HTMLElement): OriginalElementState {
     src: element.getAttribute("src"),
     srcset: element.getAttribute("srcset"),
     alt: element.getAttribute("alt"),
+    width: element.getAttribute("width"),
+    height: element.getAttribute("height"),
   };
 }
 
@@ -112,7 +193,7 @@ function restoreOriginalState(element: HTMLElement, original: OriginalElementSta
   else element.setAttribute("style", original.style);
 
   if (element instanceof HTMLImageElement) {
-    for (const [name, value] of [["src", original.src], ["srcset", original.srcset], ["alt", original.alt]] as const) {
+    for (const [name, value] of [["src", original.src], ["srcset", original.srcset], ["alt", original.alt], ["width", original.width], ["height", original.height]] as const) {
       if (value === null) element.removeAttribute(name);
       else element.setAttribute(name, value);
     }
@@ -140,6 +221,7 @@ export function PageRuntime({
   editing = false,
   selectedId = null,
   onSelect,
+  onManualCropPosition,
   children,
 }: {
   pageKey: WebsitePageKey;
@@ -147,15 +229,26 @@ export function PageRuntime({
   editing?: boolean;
   selectedId?: string | null;
   onSelect?: (slot: DiscoveredWebsiteSlot) => void;
+  onManualCropPosition?: (position: { manualX: number; manualY: number }) => void;
   children: ReactNode;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const originalStates = useRef(new WeakMap<HTMLElement, OriginalElementState>());
+  const originalFrameStyles = useRef(new WeakMap<HTMLElement, string | null>());
+  const originalMediaContainerStyles = useRef(new WeakMap<HTMLElement, string | null>());
   const [hovered, setHovered] = useState<{
     id: string;
     label: string;
     left: number;
     top: number;
+  } | null>(null);
+  const manualDrag = useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+    startX: number;
+    startY: number;
+    element: HTMLImageElement;
   } | null>(null);
 
   useLayoutEffect(() => {
@@ -180,7 +273,31 @@ export function PageRuntime({
         originalStates.current.set(element, original);
       }
       restoreOriginalState(element, original);
-      applyOverride(element, document.slots[id]);
+      if (element instanceof HTMLImageElement && element.parentElement) {
+        const frame = element.parentElement;
+        if (!originalFrameStyles.current.has(frame)) {
+          originalFrameStyles.current.set(frame, frame.getAttribute("style"));
+        }
+        const originalFrameStyle = originalFrameStyles.current.get(frame);
+        if (originalFrameStyle === null) frame.removeAttribute("style");
+        else if (originalFrameStyle !== undefined) frame.setAttribute("style", originalFrameStyle);
+        frame.classList.remove("page-photo-frame--natural", "page-photo-frame--manual");
+        delete frame.dataset.pagePhotoDisplay;
+        const mediaContainer = element.closest<HTMLElement>("[data-media-container]");
+        if (mediaContainer) {
+          if (!originalMediaContainerStyles.current.has(mediaContainer)) {
+            originalMediaContainerStyles.current.set(mediaContainer, mediaContainer.getAttribute("style"));
+          }
+          const originalContainerStyle = originalMediaContainerStyles.current.get(mediaContainer);
+          if (originalContainerStyle === null) mediaContainer.removeAttribute("style");
+          else if (originalContainerStyle !== undefined) mediaContainer.setAttribute("style", originalContainerStyle);
+          mediaContainer.classList.remove("page-media-container--natural", "page-media-container--manual");
+          delete mediaContainer.dataset.pagePhotoDisplay;
+        }
+        applyOverride(element, document.slots[id], mediaContainer);
+      } else {
+        applyOverride(element, document.slots[id]);
+      }
       element.classList.toggle("is-page-slot-selected", selectedId === id);
     }
   }, [document, editing, pageKey, selectedId]);
@@ -223,6 +340,37 @@ export function PageRuntime({
           alt: element instanceof HTMLImageElement ? element.alt : undefined,
         });
       } : undefined}
+      onPointerDown={editing ? (event) => {
+        const element = (event.target as Element | null)?.closest<HTMLImageElement>("img[data-page-slot]");
+        if (!element || element.dataset.pageSlot !== selectedId || element.parentElement?.dataset.pagePhotoDisplay !== "manual") return;
+        const layout = document.slots[selectedId]?.layout;
+        event.preventDefault();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        manualDrag.current = {
+          pointerId: event.pointerId,
+          x: event.clientX,
+          y: event.clientY,
+          startX: layout?.manualX ?? 0,
+          startY: layout?.manualY ?? 0,
+          element,
+        };
+      } : undefined}
+      onPointerMove={editing ? (event) => {
+        const drag = manualDrag.current;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        const bounds = drag.element.parentElement?.getBoundingClientRect();
+        if (!bounds) return;
+        onManualCropPosition?.({
+          manualX: Math.max(-100, Math.min(100, drag.startX + ((event.clientX - drag.x) / Math.max(1, bounds.width)) * 100)),
+          manualY: Math.max(-100, Math.min(100, drag.startY + ((event.clientY - drag.y) / Math.max(1, bounds.height)) * 100)),
+        });
+      } : undefined}
+      onPointerUp={editing ? (event) => {
+        if (manualDrag.current?.pointerId !== event.pointerId) return;
+        manualDrag.current = null;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+      } : undefined}
+      onPointerCancel={editing ? () => { manualDrag.current = null; } : undefined}
       onKeyDownCapture={editing ? (event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         const element = (event.target as Element | null)?.closest<HTMLElement>("[data-page-slot]");

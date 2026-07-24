@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { CtaBanner } from "@/components/public/cta-banner";
 import { PageRuntime } from "@/components/public/page-runtime";
+import { TemplateImage } from "@/components/public/template-image";
 import { ServiceList } from "@/components/public/service-list";
 import { musicContent, portfolioItems } from "@/content/public-site";
 import { getPublishedWebsitePage } from "@/lib/database/website-pages";
@@ -27,14 +27,13 @@ export function MusicPageView() {
               Start a music project <span aria-hidden="true">→</span>
             </Link>
           </div>
-          <div className="service-page-hero__media">
-            <Image
+          <div className="service-page-hero__media" data-media-container>
+            <TemplateImage
               src="/images/home-music.png"
               alt="Producer seated at a music studio workstation"
-              fill
+              width={1672}
+              height={941}
               priority
-              loading="eager"
-              sizes="(max-width: 880px) calc(100vw - 64px), (max-width: 1360px) 52vw, 680px"
             />
           </div>
         </div>
@@ -67,12 +66,12 @@ export function MusicPageView() {
             <Link href="/portfolio" className="service-inline-link">View portfolio <span aria-hidden="true">→</span></Link>
           </header>
           <div className="music-project-grid">
-            <div className="music-project-grid__image">
-              <Image
+            <div className="music-project-grid__image" data-media-container>
+              <TemplateImage
                 src="/images/home-hero.png"
                 alt="Music producer listening in a dark studio"
-                fill
-                sizes="(max-width: 880px) calc(100vw - 64px), 620px"
+                width={1672}
+                height={941}
               />
             </div>
             <div className="music-project-list">

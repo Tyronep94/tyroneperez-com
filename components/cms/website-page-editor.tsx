@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { publishWebsitePage, saveWebsitePageDraft } from "@/app/admin/pages/actions";
+import { IntrinsicImage } from "@/components/media/intrinsic-image";
 import { PageRuntime, type DiscoveredWebsiteSlot } from "@/components/public/page-runtime";
 import { SiteFooter } from "@/components/public/site-footer";
 import { SiteHeader } from "@/components/public/site-header";
 import type { MediaAsset } from "@/types/cms";
+import type { MediaIntegrityIssue } from "@/lib/media-integrity";
 import {
   websitePageMeta,
   type WebsitePageDocument,
@@ -21,11 +23,13 @@ const clone = <T,>(value: T): T => structuredClone(value);
 export function WebsitePageEditor({
   pageKey,
   initialDocument,
+  initialIntegrityIssues,
   assets,
   children,
 }: {
   pageKey: WebsitePageKey;
   initialDocument: WebsitePageDocument;
+  initialIntegrityIssues: MediaIntegrityIssue[];
   assets: MediaAsset[];
   children: ReactNode;
 }) {
@@ -37,6 +41,7 @@ export function WebsitePageEditor({
   const [saveState, setSaveState] = useState<"saved" | "unsaved" | "saving" | "error">("saved");
   const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
+  const [integrityIssues, setIntegrityIssues] = useState(initialIntegrityIssues);
   const [busy, startTransition] = useTransition();
   const initialized = useRef(false);
   const page = websitePageMeta[pageKey];
@@ -75,6 +80,56 @@ export function WebsitePageEditor({
   const updateLayout = (patch: Partial<WebsiteSlotLayout>) => {
     updateSelected({ layout: { ...selectedOverride?.layout, ...patch } });
   };
+
+  const selectAsset = (asset: MediaAsset) => {
+    if (!selected) return;
+    updateSelected({
+      assetId: asset.id,
+      asset,
+      alt: asset.alt_text ?? selected.alt ?? "",
+      layout: {
+        ...selectedOverride?.layout,
+        objectFit: "contain",
+        objectPosition: "center",
+        manualZoom: 1,
+        manualX: 0,
+        manualY: 0,
+      },
+    });
+    setIntegrityIssues((issues) => issues.filter((issue) => issue.slotId !== selected.id));
+  };
+
+  const removeBrokenOverride = (slotId: string) => {
+    const slots = { ...document.slots };
+    delete slots[slotId];
+    commitDocument({ ...document, slots });
+    setIntegrityIssues((issues) => issues.filter((issue) => issue.slotId !== slotId));
+    if (selected?.id === slotId) setSelected(null);
+  };
+
+  const focusBrokenSlot = (slotId: string) => {
+    window.document.querySelector<HTMLElement>(`[data-page-slot="${CSS.escape(slotId)}"]`)?.click();
+  };
+
+  const updateManualCropLive = useCallback((patch: Pick<WebsiteSlotLayout, "manualX" | "manualY">) => {
+    if (!selected) return;
+    setDocument((current) => ({
+      ...current,
+      slots: {
+        ...current.slots,
+        [selected.id]: {
+          text: selected.text,
+          href: selected.href,
+          alt: selected.alt,
+          ...current.slots[selected.id],
+          id: selected.id,
+          type: selected.type,
+          layout: { ...current.slots[selected.id]?.layout, ...patch },
+        },
+      },
+    }));
+    setSaveState("unsaved");
+  }, [selected]);
 
   const restoreSelectedContent = () => {
     if (!selected) return;
@@ -169,6 +224,14 @@ export function WebsitePageEditor({
           <button className="website-page-editor__publish" onClick={publish} disabled={busy}>Publish</button>
         </div>
       </header>
+      {integrityIssues.length > 0 && <div className="website-media-integrity" role="alert" data-page-editor-ignore>
+        <strong>Broken media must be resolved before publishing.</strong>
+        {integrityIssues.map((issue) => <div key={`${issue.slotId}-${issue.assetId}`}>
+          <span>{issue.filename} · {issue.pageKey}:{issue.slotId} · {issue.reason === "missing_object" ? "storage object missing" : "media record missing"}</span>
+          <button type="button" onClick={() => focusBrokenSlot(issue.slotId)}>Replace</button>
+          <button type="button" onClick={() => removeBrokenOverride(issue.slotId)}>Remove</button>
+        </div>)}
+      </div>}
       {message && <div className="visual-toast" role="status">{message}<button onClick={() => setMessage("")}>×</button></div>}
       <div className="website-page-editor__workspace">
         <aside className="website-page-editor__inspector" data-page-editor-ignore>
@@ -205,10 +268,8 @@ export function WebsitePageEditor({
                 <label className="field"><span>Alt text</span><textarea className="input" value={selectedOverride?.alt ?? selected.alt ?? ""} onChange={(event) => updateSelected({ alt: event.target.value })} /></label>
                 <label className="field"><span>Find a photo</span><input className="input" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Media Library" /></label>
                 <div className="website-page-editor__media-grid">
-                  {filteredAssets.slice(0, 80).map((asset) => <button key={asset.id} onClick={() => updateSelected({ assetId: asset.id, asset, alt: asset.alt_text ?? selected.alt ?? "" })}>
-                    {/* Media Library thumbnails use trusted admin media records. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={asset.variants?.thumbnail?.url ?? asset.public_url} alt="" />
+                  {filteredAssets.slice(0, 80).map((asset) => <button key={asset.id} onClick={() => selectAsset(asset)}>
+                    <IntrinsicImage src={asset.variants?.thumbnail?.url ?? asset.public_url} alt="" width={asset.width} height={asset.height} missingLabel="Missing media" />
                     <span>{asset.title}</span>
                   </button>)}
                 </div>
@@ -226,8 +287,18 @@ export function WebsitePageEditor({
               </label>)}
               <label className="field"><span>Text alignment</span><select className="input" value={selectedOverride?.layout?.textAlign ?? ""} onChange={(event) => updateLayout({ textAlign: (event.target.value || undefined) as WebsiteSlotLayout["textAlign"] })}><option value="">Template default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>
               {selected.type === "media" && <>
-                <label className="field"><span>Image fit</span><select className="input" value={selectedOverride?.layout?.objectFit ?? ""} onChange={(event) => updateLayout({ objectFit: (event.target.value || undefined) as WebsiteSlotLayout["objectFit"] })}><option value="">Template default</option><option value="contain">Fit entire photo</option><option value="cover">Fill frame</option></select></label>
-                <label className="field"><span>Image position</span><input className="input" value={selectedOverride?.layout?.objectPosition ?? ""} placeholder="50% 50%" onChange={(event) => updateLayout({ objectPosition: event.target.value })} /></label>
+                <fieldset className="website-display-mode">
+                  <legend>Display Mode</legend>
+                  <label><input type="radio" name="display-mode" checked={selectedOverride?.layout?.objectFit !== "manual"} onChange={() => updateLayout({ objectFit: "contain", objectPosition: "center", manualZoom: 1, manualX: 0, manualY: 0 })} /> Original Proportions <small>No crop</small></label>
+                  <label><input type="radio" name="display-mode" checked={selectedOverride?.layout?.objectFit === "manual"} onChange={() => updateLayout({ objectFit: "manual", objectPosition: "center", manualZoom: selectedOverride?.layout?.manualZoom ?? 1, manualX: selectedOverride?.layout?.manualX ?? 0, manualY: selectedOverride?.layout?.manualY ?? 0 })} /> Manual Crop</label>
+                </fieldset>
+                {selectedOverride?.layout?.objectFit === "manual" && <div className="website-manual-crop">
+                  <p>Drag the photo in the preview or use the controls below.</p>
+                  <label className="field"><span>Zoom · {(selectedOverride.layout.manualZoom ?? 1).toFixed(2)}×</span><input type="range" min="0.5" max="4" step="0.05" value={selectedOverride.layout.manualZoom ?? 1} onChange={(event) => updateLayout({ manualZoom: Number(event.target.value) })} /></label>
+                  <label className="field"><span>Horizontal · {Math.round(selectedOverride.layout.manualX ?? 0)}</span><input type="range" min="-100" max="100" value={selectedOverride.layout.manualX ?? 0} onChange={(event) => updateLayout({ manualX: Number(event.target.value) })} /></label>
+                  <label className="field"><span>Vertical · {Math.round(selectedOverride.layout.manualY ?? 0)}</span><input type="range" min="-100" max="100" value={selectedOverride.layout.manualY ?? 0} onChange={(event) => updateLayout({ manualY: Number(event.target.value) })} /></label>
+                  <button type="button" onClick={() => updateLayout({ manualZoom: 1, manualX: 0, manualY: 0 })}>Reset Crop</button>
+                </div>}
               </>}
               <button className="website-slot-layout__reset" onClick={() => updateSelected({ layout: undefined })}>Restore template layout</button>
             </div>}
@@ -236,7 +307,7 @@ export function WebsitePageEditor({
         <section className="website-page-editor__stage">
           <div className="website-page-editor__page public-site">
             <SiteHeader />
-            <PageRuntime pageKey={pageKey} document={document} editing selectedId={selected?.id ?? null} onSelect={setSelected}>
+            <PageRuntime pageKey={pageKey} document={document} editing selectedId={selected?.id ?? null} onSelect={setSelected} onManualCropPosition={updateManualCropLive}>
               {children}
             </PageRuntime>
             <SiteFooter />

@@ -32,12 +32,18 @@ function Photo({
     "--gallery-slot-tablet-width": displayPhoto.slotDimensions?.tabletWidth,
     "--gallery-slot-mobile-width": displayPhoto.slotDimensions?.mobileWidth,
     "--gallery-slot-aspect-ratio": displayPhoto.slotDimensions?.aspectRatio,
+    "--gallery-photo-natural-aspect-ratio": displayPhoto.asset.width && displayPhoto.asset.height
+      ? displayPhoto.asset.width / displayPhoto.asset.height
+      : displayPhoto.slotDimensions?.aspectRatio,
+    "--gallery-manual-zoom": displayPhoto.manualCrop?.zoom ?? 1,
+    "--gallery-manual-x": `${displayPhoto.manualCrop?.x ?? 0}%`,
+    "--gallery-manual-y": `${displayPhoto.manualCrop?.y ?? 0}%`,
   } as React.CSSProperties;
   const selected = selectedId === displayPhoto.id;
   const orientation = galleryPhotoOrientation(displayPhoto);
   const locked = displayPhoto.templateLocked === true;
   const fitMode = displayPhoto.fitMode ?? "contain";
-  const displayCrop = locked ? fitMode === "cover" ? "cover" : "natural" : displayPhoto.crop;
+  const displayCrop = fitMode === "manual" ? "cover" : "natural";
   const editorLabel = locked
     ? displayPhoto.replacementAssetId ? "Your Photo" : displayPhoto.referenceAssetId ? "Reference" : "Empty"
     : displayPhoto.hidden ? "Hidden" : displayPhoto.featured ? "Featured" : "Select to edit";
@@ -118,7 +124,11 @@ export function GalleryPage({ entry, layout, settings = {}, editing = false, sel
             <h1>{entry.title}</h1>
             {entry.excerpt && <p>{entry.excerpt}</p>}
           </div>
-          {coverAsset && <div className={`gallery-cover gallery-cover--${coverPhoto?.crop ?? "natural"} gallery-cover--${coverOrientation}`} style={coverPhoto ? { "--gallery-focus-x": `${coverPhoto.focalPoint.x}%`, "--gallery-focus-y": `${coverPhoto.focalPoint.y}%` } as React.CSSProperties : undefined}><CmsImage asset={coverAsset} sizes="(max-width: 740px) 92vw, 760px" priority /></div>}
+          {coverAsset && <div className={`gallery-cover gallery-cover--${coverPhoto?.fitMode === "manual" ? "cover" : "natural"} gallery-cover--${coverOrientation}`} style={coverPhoto ? {
+            "--gallery-manual-zoom": coverPhoto.manualCrop?.zoom ?? 1,
+            "--gallery-manual-x": `${coverPhoto.manualCrop?.x ?? 0}%`,
+            "--gallery-manual-y": `${coverPhoto.manualCrop?.y ?? 0}%`,
+          } as React.CSSProperties : undefined}><CmsImage asset={coverAsset} sizes="(max-width: 740px) 92vw, 760px" priority /></div>}
           {(settings.shootDate || settings.camera || settings.lens) && <dl className="gallery-meta">
             {settings.shootDate && <div><dt>Photographed</dt><dd>{settings.shootDate}</dd></div>}
             {settings.camera && <div><dt>Camera</dt><dd>{settings.camera}</dd></div>}

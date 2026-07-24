@@ -6,6 +6,7 @@ import { MusicPageView } from "@/app/(public)/music/page";
 import { PhotographyPageView } from "@/app/(public)/photography/page";
 import { WebsitePageEditor } from "@/components/cms/website-page-editor";
 import { requireAdmin } from "@/lib/auth/admin";
+import { inspectWebsiteDocumentMedia } from "@/lib/media-integrity";
 import type { MediaAsset } from "@/types/cms";
 import {
   emptyWebsitePageDocument,
@@ -35,11 +36,21 @@ export default async function WebsitePageEditorPage({ params }: { params: Promis
     supabase.from("media_assets").select("*").eq("kind", "image").order("created_at", { ascending: false }).limit(1000),
   ]);
   const initialDocument = (draft?.document ?? publication?.document ?? emptyWebsitePageDocument(page)) as WebsitePageDocument;
+  const [draftIssues, publicationIssues] = await Promise.all([
+    inspectWebsiteDocumentMedia(supabase, initialDocument),
+    publication?.document
+      ? inspectWebsiteDocumentMedia(supabase, publication.document as WebsitePageDocument)
+      : Promise.resolve([]),
+  ]);
+  const integrityIssues = [...draftIssues, ...publicationIssues].filter((issue, index, issues) =>
+    issues.findIndex((candidate) => candidate.slotId === issue.slotId && candidate.assetId === issue.assetId && candidate.reason === issue.reason) === index,
+  );
   return (
     <WebsitePageEditor
       pageKey={page}
       initialDocument={initialDocument}
       assets={(assets ?? []) as MediaAsset[]}
+      initialIntegrityIssues={integrityIssues}
     >
       <PageView pageKey={page} />
     </WebsitePageEditor>

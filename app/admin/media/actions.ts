@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth/admin";
+import { websiteDocumentMediaReferences } from "@/lib/media-integrity";
 
 const metadataSchema = z.object({
   storage_path: z.string().min(1),
@@ -13,6 +14,8 @@ const metadataSchema = z.object({
   mime_type: z.string().min(1),
   width: z.number().int().positive().nullable(),
   height: z.number().int().positive().nullable(),
+  aspect_ratio: z.number().positive().nullable(),
+  orientation: z.enum(["landscape", "portrait", "square"]).nullable(),
   file_size: z.number().int().nonnegative(),
 });
 
@@ -22,21 +25,40 @@ export async function registerMedia(input: z.infer<typeof metadataSchema>) {
   const { admin, supabase } = await requireAdmin();
   const kind = input.mime_type.startsWith("image/") ? "image" : input.mime_type.startsWith("audio/") ? "audio" : input.mime_type.startsWith("video/") ? "video" : "document";
   const transformBase = input.public_url.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
-  const { data, error } = await supabase.from("media_assets").insert({
+  const variants = kind === "image" ? {
+    thumbnail: { width: 320, url: `${transformBase}?width=320&resize=contain&quality=80` },
+    medium: { width: 960, url: `${transformBase}?width=960&resize=contain&quality=84` },
+    large: { width: 1920, url: `${transformBase}?width=1920&resize=contain&quality=88` },
+    original: { width: input.width ?? 0, url: input.public_url },
+    metadata: { aspect_ratio: input.aspect_ratio, orientation: input.orientation },
+  } : {};
+  const payload = {
     ...parsed.data,
     kind,
     uploaded_by: admin.id,
-    variants: kind === "image" ? {
-      thumbnail: { width: 320, url: `${transformBase}?width=320&quality=80` },
-      medium: { width: 960, url: `${transformBase}?width=960&quality=84` },
-      large: { width: 1920, url: `${transformBase}?width=1920&quality=88` },
-      original: { width: input.width ?? 0, url: input.public_url },
-    } : {},
-  }).select("*").single();
-  if (error) return { ok: false, message: error.message };
+    variants,
+    object_status: "available",
+    object_checked_at: new Date().toISOString(),
+  };
+  let result = await supabase.from("media_assets").insert(payload).select("*").single();
+  if (result.error && (result.error.code === "PGRST204" || result.error.code === "42703")) {
+    const {
+      aspect_ratio: _aspectRatio,
+      orientation: _orientation,
+      object_status: _objectStatus,
+      object_checked_at: _objectCheckedAt,
+      ...legacyPayload
+    } = payload;
+    void _aspectRatio;
+    void _orientation;
+    void _objectStatus;
+    void _objectCheckedAt;
+    result = await supabase.from("media_assets").insert(legacyPayload).select("*").single();
+  }
+  if (result.error) return { ok: false, message: result.error.message };
   await supabase.from("cms_activity").insert({ actor_id: admin.id, action: "uploaded", entity_type: "media", summary: `Uploaded “${input.title}”` });
   revalidatePath("/admin/media");
-  return { ok: true, asset: data };
+  return { ok: true, asset: result.data };
 }
 
 export async function deleteMedia(ids: string[]) {
@@ -44,6 +66,16 @@ export async function deleteMedia(ids: string[]) {
   if (!ids.length) return { ok: false, message: "Select at least one asset." };
   const { data: used } = await supabase.from("content_asset_usage").select("asset_id").in("asset_id", ids);
   if (used?.length) return { ok: false, message: `${used.length} selected asset${used.length === 1 ? " is" : "s are"} currently in use. Remove those references before deleting.` };
+  const [{ data: drafts }, { data: publications }] = await Promise.all([
+    supabase.from("website_page_drafts").select("page_key,document"),
+    supabase.from("website_page_publications").select("page_key,document"),
+  ]);
+  const pageReferences = [...(drafts ?? []), ...(publications ?? [])].flatMap((row) =>
+    websiteDocumentMediaReferences(row.document).filter((reference) => ids.includes(reference.assetId)).map((reference) => `${row.page_key}:${reference.slotId}`),
+  );
+  if (pageReferences.length) {
+    return { ok: false, message: `This asset is used by ${[...new Set(pageReferences)].join(", ")}. Replace or remove those page references before deleting.` };
+  }
   const { data: assets } = await supabase.from("media_assets").select("id,storage_path,title").in("id", ids);
   const paths = (assets ?? []).map(asset => asset.storage_path);
   if (paths.length) {
@@ -89,17 +121,33 @@ export async function bulkMoveMedia(ids: string[], collectionId: string) {
   return { ok: true };
 }
 
-export async function replaceMediaMetadata(id: string, values: { filename: string; mime_type: string; file_size: number; width: number | null; height: number | null; public_url: string }) {
+export async function replaceMediaMetadata(id: string, values: { filename: string; mime_type: string; file_size: number; width: number | null; height: number | null; aspect_ratio: number | null; orientation: "landscape" | "portrait" | "square" | null; public_url: string }) {
   const { supabase } = await requireAdmin();
   const transformBase = values.public_url.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
   const variants = values.mime_type.startsWith("image/") ? {
-    thumbnail: { width: 320, url: `${transformBase}?width=320&quality=80` },
-    medium: { width: 960, url: `${transformBase}?width=960&quality=84` },
-    large: { width: 1920, url: `${transformBase}?width=1920&quality=88` },
+    thumbnail: { width: 320, url: `${transformBase}?width=320&resize=contain&quality=80` },
+    medium: { width: 960, url: `${transformBase}?width=960&resize=contain&quality=84` },
+    large: { width: 1920, url: `${transformBase}?width=1920&resize=contain&quality=88` },
     original: { width: values.width ?? 0, url: values.public_url },
+    metadata: { aspect_ratio: values.aspect_ratio, orientation: values.orientation },
   } : {};
-  const { error } = await supabase.from("media_assets").update({ ...values, variants }).eq("id", id);
-  if (error) return { ok: false, message: error.message };
+  const payload = { ...values, variants, object_status: "available", object_checked_at: new Date().toISOString() };
+  let result = await supabase.from("media_assets").update(payload).eq("id", id);
+  if (result.error && (result.error.code === "PGRST204" || result.error.code === "42703")) {
+    const {
+      aspect_ratio: _aspectRatio,
+      orientation: _orientation,
+      object_status: _objectStatus,
+      object_checked_at: _objectCheckedAt,
+      ...legacyPayload
+    } = payload;
+    void _aspectRatio;
+    void _orientation;
+    void _objectStatus;
+    void _objectCheckedAt;
+    result = await supabase.from("media_assets").update(legacyPayload).eq("id", id);
+  }
+  if (result.error) return { ok: false, message: result.error.message };
   revalidatePath("/admin/media");
   return { ok: true };
 }

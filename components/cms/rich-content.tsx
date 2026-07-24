@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { IntrinsicImage } from "@/components/media/intrinsic-image";
 import type { RichTextNode } from "@/types/cms";
 
 const safeHref = (value: unknown) => {
@@ -36,9 +37,9 @@ function renderNode(node: RichTextNode, key: string): ReactNode {
     case "image": {
       const src = typeof node.attrs?.src === "string" ? node.attrs.src : "";
       if (!src) return null;
-      // Rich editor images can be external or Supabase-hosted, so a native image is intentional.
-      // eslint-disable-next-line @next/next/no-img-element
-      return <figure key={key}><img src={src} alt={typeof node.attrs?.alt === "string" ? node.attrs.alt : ""} loading="lazy" /></figure>;
+      const width = Number(node.attrs?.width);
+      const height = Number(node.attrs?.height);
+      return <figure key={key}><IntrinsicImage src={src} alt={typeof node.attrs?.alt === "string" ? node.attrs.alt : ""} width={Number.isFinite(width) && width > 0 ? width : undefined} height={Number.isFinite(height) && height > 0 ? height : undefined} /></figure>;
     }
     case "youtube": {
       const src = safeHref(node.attrs?.src);

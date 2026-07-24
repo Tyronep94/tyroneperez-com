@@ -30,7 +30,14 @@ async function imageDimensions(file: File) {
   try {
     const image = new window.Image();
     await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = reject; image.src = url; });
-    return { width: image.naturalWidth, height: image.naturalHeight };
+    const width = image.naturalWidth;
+    const height = image.naturalHeight;
+    return {
+      width,
+      height,
+      aspect_ratio: width / height,
+      orientation: width === height ? "square" as const : width > height ? "landscape" as const : "portrait" as const,
+    };
   } finally { URL.revokeObjectURL(url); }
 }
 
@@ -53,6 +60,7 @@ function makePhoto(asset: MediaAsset): GalleryPhoto {
     caption: asset.caption ?? "",
     templateLocked: false,
     fitMode: "contain",
+    manualCrop: { zoom: 1, x: 0, y: 0 },
   };
 }
 
@@ -64,6 +72,7 @@ function replaceTemplatePhoto(photo: GalleryPhoto, asset: MediaAsset): GalleryPh
     replacementAssetId: asset.id,
     replacementAsset: asset,
     fitMode: "contain",
+    manualCrop: { zoom: 1, x: 0, y: 0 },
     focalPoint: { x: 50, y: 50 },
     crop: "natural",
     cropIntent: undefined,
@@ -314,6 +323,7 @@ export function PhotographyVisualEditor({
       replacementAssetId: null,
       replacementAsset: null,
       fitMode: "contain",
+      manualCrop: { zoom: 1, x: 0, y: 0 },
       focalPoint: { x: 50, y: 50 },
       altText: selected.referenceAsset.alt_text ?? "",
       caption: selected.referenceAsset.caption ?? "",
@@ -329,11 +339,11 @@ export function PhotographyVisualEditor({
     setPhotoSettingsOpen(false);
     setRepositioningId(null);
   };
-  const updateFocalPointLive = (id: string, focalPoint: { x: number; y: number }) => {
+  const updateManualCropLive = (id: string, manualCrop: { zoom: number; x: number; y: number }) => {
     setLayout((current) => ({
       ...current,
       sections: current.sections.map((section) => section.type === "images"
-        ? { ...section, items: section.items.map((photo) => photo.id === id ? { ...photo, focalPoint } : photo) }
+        ? { ...section, items: section.items.map((photo) => photo.id === id ? { ...photo, manualCrop } : photo) }
         : section),
     }));
     setSaveState("unsaved");
@@ -433,13 +443,13 @@ export function PhotographyVisualEditor({
     <div className="visual-photo-toolbar__summary">
       <strong>{selected.templateLocked ? selected.slotLabel : selected.asset.title}</strong>
       <span>{selected.templateLocked
-        ? `${selected.replacementAssetId ? "Your Photo" : "Reference Photo"} · ${selected.fitMode === "cover" ? "Fill Frame" : "Fit Entire Photo"} · template position locked`
+        ? `${selected.replacementAssetId ? "Your Photo" : "Reference Photo"} · ${selected.fitMode === "manual" ? "Manual Crop" : "Original Proportions"} · template position locked`
         : `Original ${selected.asset.width ?? "?"} × ${selected.asset.height ?? "?"} · Displayed ${photoMetrics ? `${photoMetrics.width} × ${photoMetrics.height}` : "measuring…"} · ${(selected.size ?? (galleryPhotoOrientation(selected) === "portrait" ? "medium" : "large")).replace("full", "full width")}`}</span>
     </div>
     {selected.templateLocked ? <>
       <div className="visual-photo-toolbar__actions">
         <button className="is-primary" onClick={() => { setReplacementPicker("library"); setPhotoSettingsOpen(false); }}>Replace Photo</button>
-        <button className={repositioningId === selected.id ? "is-active" : ""} disabled={selected.fitMode !== "cover"} onClick={() => setRepositioningId((id) => id === selected.id ? null : selected.id)}>Reposition</button>
+        <button className={repositioningId === selected.id ? "is-active" : ""} disabled={selected.fitMode !== "manual"} onClick={() => setRepositioningId((id) => id === selected.id ? null : selected.id)}>Reposition</button>
         <button disabled={!selected.replacementAssetId} onClick={restoreReference}>Restore Reference</button>
         <button className={photoSettingsOpen ? "is-active" : ""} onClick={() => { setPhotoSettingsOpen((open) => !open); setReplacementPicker(null); }}>Photo Settings</button>
       </div>
@@ -453,14 +463,17 @@ export function PhotographyVisualEditor({
         </button>)}</div>
       </div>}
       {photoSettingsOpen && <div className="visual-template-settings">
-        <strong>How should the photo fit?</strong>
+        <strong>Display Mode</strong>
         <div>
-          <button className={selected.fitMode !== "cover" ? "is-active" : ""} onClick={() => { updatePhoto(selected.id, { fitMode: "contain", focalPoint: { x: 50, y: 50 } }); setRepositioningId(null); }}>Fit Entire Photo</button>
-          <button className={selected.fitMode === "cover" ? "is-active" : ""} onClick={() => updatePhoto(selected.id, { fitMode: "cover" })}>Fill Frame</button>
+          <button className={selected.fitMode !== "manual" ? "is-active" : ""} onClick={() => { updatePhoto(selected.id, { fitMode: "contain", focalPoint: { x: 50, y: 50 }, manualCrop: { zoom: 1, x: 0, y: 0 } }); setRepositioningId(null); }}>Original Proportions</button>
+          <button className={selected.fitMode === "manual" ? "is-active" : ""} onClick={() => updatePhoto(selected.id, { fitMode: "manual", manualCrop: selected.manualCrop ?? { zoom: 1, x: 0, y: 0 } })}>Manual Crop</button>
         </div>
-        {selected.fitMode === "cover" && <div className="visual-position-actions">
-          <span>{repositioningId === selected.id ? "Drag the photo inside its frame." : "Use Reposition to move the crop."}</span>
-          <button onClick={() => updatePhoto(selected.id, { focalPoint: { x: 50, y: 50 } })}>Reset Position</button>
+        {selected.fitMode === "manual" && <div className="visual-manual-crop">
+          <span>{repositioningId === selected.id ? "Drag the photo inside its frame." : "Use Reposition or the controls below."}</span>
+          <label><span>Zoom · {(selected.manualCrop?.zoom ?? 1).toFixed(2)}×</span><input type="range" min="0.5" max="4" step="0.05" value={selected.manualCrop?.zoom ?? 1} onChange={(event) => updatePhoto(selected.id, { manualCrop: { ...(selected.manualCrop ?? { zoom: 1, x: 0, y: 0 }), zoom: Number(event.target.value) } })} /></label>
+          <label><span>Horizontal · {Math.round(selected.manualCrop?.x ?? 0)}</span><input type="range" min="-100" max="100" value={selected.manualCrop?.x ?? 0} onChange={(event) => updatePhoto(selected.id, { manualCrop: { ...(selected.manualCrop ?? { zoom: 1, x: 0, y: 0 }), x: Number(event.target.value) } })} /></label>
+          <label><span>Vertical · {Math.round(selected.manualCrop?.y ?? 0)}</span><input type="range" min="-100" max="100" value={selected.manualCrop?.y ?? 0} onChange={(event) => updatePhoto(selected.id, { manualCrop: { ...(selected.manualCrop ?? { zoom: 1, x: 0, y: 0 }), y: Number(event.target.value) } })} /></label>
+          <button onClick={() => updatePhoto(selected.id, { manualCrop: { zoom: 1, x: 0, y: 0 } })}>Reset Crop</button>
         </div>}
         <label className="field"><span>Alt text</span><textarea className="input" value={selected.altText} onChange={(event) => updatePhoto(selected.id, { altText: event.target.value })} /></label>
         <button className="visual-unlock-layout" onClick={unlockSelectedSlot}>Unlock Layout</button>
@@ -475,7 +488,6 @@ export function PhotographyVisualEditor({
       <details className="visual-photo-advanced">
         <summary>Advanced photo settings</summary>
         <div className="visual-photo-advanced__body">
-          <label className="check-row"><input type="checkbox" checked={selected.crop === "cover"} onChange={(event) => updatePhoto(selected.id, { crop: event.target.checked ? "cover" : "natural", cropIntent: event.target.checked ? "explicit" : undefined })} /> Crop to frame</label>
           <label className="field"><span>Alignment</span><select className="input" value={selected.alignment} onChange={(event) => updatePhoto(selected.id, { alignment: event.target.value as GalleryPhoto["alignment"] })}><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>
           <label className="field"><span>Caption</span><textarea className="input" value={selected.caption} onChange={(event) => updatePhoto(selected.id, { caption: event.target.value })} /></label>
           <label className="field"><span>Alt text</span><textarea className="input" value={selected.altText} onChange={(event) => updatePhoto(selected.id, { altText: event.target.value })} /></label>
@@ -569,7 +581,7 @@ export function PhotographyVisualEditor({
           <div className="visual-preview-page">
             <div className="public-site">
               <SiteHeader />
-              <GalleryEditorPreview entry={{ ...entry, title: meta.title, slug: meta.slug, excerpt: meta.description, category: meta.category, cover_asset_id: meta.coverAssetId, cover_asset: assets.find((asset) => asset.id === meta.coverAssetId) ?? null }} layout={layout} settings={meta.settings} selectedId={selectedId} onSelect={(id) => { setSelectedId(id); setReplacementPicker(null); setPhotoSettingsOpen(false); setRepositioningId(null); }} onPhotoMetrics={setPhotoMetrics} repositioningId={repositioningId} onReposition={updateFocalPointLive} onDropPhoto={addOrMovePhoto} onDragPhoto={(id) => { setDraggedPhotoId(id); setDraggedAssetId(null); setDraggedSectionId(null); }} onDragSection={(id) => { setDraggedSectionId(id); setDraggedPhotoId(null); setDraggedAssetId(null); }} />
+              <GalleryEditorPreview entry={{ ...entry, title: meta.title, slug: meta.slug, excerpt: meta.description, category: meta.category, cover_asset_id: meta.coverAssetId, cover_asset: assets.find((asset) => asset.id === meta.coverAssetId) ?? null }} layout={layout} settings={meta.settings} selectedId={selectedId} onSelect={(id) => { setSelectedId(id); setReplacementPicker(null); setPhotoSettingsOpen(false); setRepositioningId(null); }} onPhotoMetrics={setPhotoMetrics} repositioningId={repositioningId} onManualReposition={updateManualCropLive} onDropPhoto={addOrMovePhoto} onDragPhoto={(id) => { setDraggedPhotoId(id); setDraggedAssetId(null); setDraggedSectionId(null); }} onDragSection={(id) => { setDraggedSectionId(id); setDraggedPhotoId(null); setDraggedAssetId(null); }} />
             </div>
           </div>
         </div>
