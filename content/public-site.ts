@@ -1,3 +1,5 @@
+import type { MediaAsset } from "@/types/cms";
+
 export type Service = {
   title: string;
   description: string;
@@ -17,6 +19,7 @@ export type PortfolioItem = {
   sortOrder: number;
   format: "portrait" | "landscape" | "square" | "wide";
   palette: "cognac" | "noir" | "sand" | "sage" | "clay" | "ink";
+  coverAsset?: MediaAsset;
 };
 
 export const publicSite = {

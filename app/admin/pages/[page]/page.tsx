@@ -4,6 +4,7 @@ import { ContactPageView } from "@/app/(public)/contact/page";
 import { HomePageView } from "@/app/(public)/page";
 import { MusicPageView } from "@/app/(public)/music/page";
 import { PhotographyPageView } from "@/app/(public)/photography/page";
+import { PortfolioPageView } from "@/app/(public)/portfolio/page";
 import { WebsitePageEditor } from "@/components/cms/website-page-editor";
 import { requireAdmin } from "@/lib/auth/admin";
 import { inspectWebsiteDocumentMedia } from "@/lib/media-integrity";
@@ -22,6 +23,7 @@ function PageView({ pageKey }: { pageKey: WebsitePageKey }) {
   if (pageKey === "home") return <HomePageView />;
   if (pageKey === "photography") return <PhotographyPageView />;
   if (pageKey === "music") return <MusicPageView />;
+  if (pageKey === "portfolio") return <PortfolioPageView />;
   if (pageKey === "about") return <AboutPageView />;
   return <ContactPageView />;
 }

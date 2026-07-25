@@ -2,6 +2,8 @@ import { PortfolioFilter } from "@/components/public/portfolio-filter";
 import { portfolioItems } from "@/content/public-site";
 import { publicMetadata } from "@/lib/seo";
 import { getPublicCollections, getPublishedPortfolio } from "@/lib/database/cms";
+import { getPublishedWebsitePage } from "@/lib/database/website-pages";
+import { PageRuntime } from "@/components/public/page-runtime";
 import type { PortfolioItem } from "@/content/public-site";
 
 export const metadata = publicMetadata(
@@ -12,7 +14,7 @@ export const metadata = publicMetadata(
 
 export const dynamic = "force-dynamic";
 
-export default async function PortfolioPage() {
+export async function PortfolioPageView() {
   const [cms, collections] = await Promise.all([getPublishedPortfolio(), getPublicCollections()]);
   const cmsItems: PortfolioItem[] = cms.map((item, index) => ({
     slug: item.slug,
@@ -26,6 +28,7 @@ export default async function PortfolioPage() {
     sortOrder: item.pinned ? -100 + index : index,
     format: "landscape",
     palette: "noir",
+    coverAsset: item.cover_asset ?? undefined,
   }));
   const cmsSlugs = new Set(cmsItems.map(item => item.slug));
   const items = [...cmsItems, ...portfolioItems.filter(item => !cmsSlugs.has(item.slug))].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -49,4 +52,9 @@ export default async function PortfolioPage() {
       </section>
     </main>
   );
+}
+
+export default async function PortfolioPage() {
+  const document = await getPublishedWebsitePage("portfolio");
+  return <PageRuntime pageKey="portfolio" document={document}><PortfolioPageView /></PageRuntime>;
 }

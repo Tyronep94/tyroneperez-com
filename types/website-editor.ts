@@ -1,6 +1,6 @@
 import type { MediaAsset } from "@/types/cms";
 
-export const websitePageKeys = ["home", "photography", "music", "about", "contact"] as const;
+export const websitePageKeys = ["home", "photography", "music", "portfolio", "about", "contact"] as const;
 export type WebsitePageKey = (typeof websitePageKeys)[number];
 export type WebsiteSlotType = "text" | "link" | "button" | "media";
 
@@ -46,6 +46,7 @@ export const websitePageMeta: Record<WebsitePageKey, { label: string; path: stri
   home: { label: "Home", path: "/", description: "Hero, featured paths, imagery, and primary calls to action." },
   photography: { label: "Photography", path: "/photography", description: "Photography services, selected work, process, and calls to action." },
   music: { label: "Music", path: "/music", description: "Music services, featured projects, process, and calls to action." },
+  portfolio: { label: "Portfolio", path: "/portfolio", description: "Selected work, project imagery, descriptions, filters, and collections." },
   about: { label: "About", path: "/about", description: "Biography, portrait, disciplines, values, and calls to action." },
   contact: { label: "Contact", path: "/contact", description: "Contact copy, project routes, response details, and links." },
 };
