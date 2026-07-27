@@ -236,3 +236,5 @@ tr:last-child td { border-bottom:0; }
 .website-card-media-panel h3{margin:0;font:400 18px Georgia,serif}
 .website-card-media-panel .field{margin:0}.website-card-media-panel>small{color:var(--muted);font-size:8px;line-height:1.5}
 .website-card-media-panel__actions{display:flex;gap:6px}.website-card-media-panel__actions .btn{flex:1}
+.website-card-audio-preview{display:grid;gap:8px;min-width:0}
+.website-card-audio-preview>span{color:var(--muted);font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}

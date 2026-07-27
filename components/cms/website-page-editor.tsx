@@ -48,6 +48,11 @@ export function WebsitePageEditor({
   const page = websitePageMeta[pageKey];
 
   const selectedOverride = selected ? document.slots[selected.id] : undefined;
+  const selectedIsFeaturedSound = pageKey === "music"
+    && selected?.type === "media"
+    && selected.id.startsWith("music.featured-sound.");
+  const selectedUsesRichMedia = selected?.type === "media"
+    && (pageKey === "portfolio" || selectedIsFeaturedSound);
   const filteredAssets = useMemo(() => assets.filter((asset) =>
     asset.kind === "image" && `${asset.title} ${asset.filename}`.toLowerCase().includes(query.toLowerCase()),
   ), [assets, query]);
@@ -268,16 +273,17 @@ export function WebsitePageEditor({
                   onChange={(event) => updateSelected({ href: event.target.value })}
                 />
               </label>}
-              {selected.type === "media" && pageKey === "portfolio" && <WebsiteSlotMediaControls
+              {selectedUsesRichMedia && <WebsiteSlotMediaControls
                 key={selected.id}
                 selected={selected}
                 override={selectedOverride}
                 imageAssets={imageAssets}
                 audioAssets={audioAssets}
+                audioOnly={selectedIsFeaturedSound}
                 onUpdate={updateSelected}
                 onRestore={restoreSelectedContent}
               />}
-              {selected.type === "media" && pageKey !== "portfolio" && <>
+              {selected.type === "media" && !selectedUsesRichMedia && <>
                 <label className="field"><span>Alt text</span><textarea className="input" value={selectedOverride?.alt ?? selected.alt ?? ""} onChange={(event) => updateSelected({ alt: event.target.value })} /></label>
                 <label className="field"><span>Find a photo</span><input className="input" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Media Library" /></label>
                 <div className="website-page-editor__media-grid">
@@ -287,7 +293,7 @@ export function WebsitePageEditor({
                   </button>)}
                 </div>
               </>}
-              {selectedOverride && !(pageKey === "portfolio" && selected.type === "media") && (
+              {selectedOverride && !selectedUsesRichMedia && (
                 <button className="website-slot-layout__reset" onClick={restoreSelectedContent}>
                   Restore original content
                 </button>

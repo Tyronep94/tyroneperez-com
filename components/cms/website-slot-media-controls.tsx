@@ -4,10 +4,11 @@ import { useRef, useState } from "react";
 import { registerMedia } from "@/app/admin/media/actions";
 import { validateSpotifyLink } from "@/app/admin/content/actions";
 import { IntrinsicImage } from "@/components/media/intrinsic-image";
+import { PortfolioAudioPlayer } from "@/components/public/portfolio-audio-player";
 import { createClient } from "@/lib/supabase/client";
 import type { MediaAsset } from "@/types/cms";
 import type { DiscoveredWebsiteSlot } from "@/components/public/page-runtime";
-import type { WebsiteSlotOverride } from "@/types/website-editor";
+import { websiteSlotAudioMedia, type WebsiteSlotOverride } from "@/types/website-editor";
 
 type ChangeMode = null | "choose" | "image" | "uploaded_audio" | "spotify";
 
@@ -34,6 +35,7 @@ export function WebsiteSlotMediaControls({
   override,
   imageAssets,
   audioAssets,
+  audioOnly = false,
   onUpdate,
   onRestore,
 }: {
@@ -41,6 +43,7 @@ export function WebsiteSlotMediaControls({
   override?: WebsiteSlotOverride;
   imageAssets: MediaAsset[];
   audioAssets: MediaAsset[];
+  audioOnly?: boolean;
   onUpdate: (patch: Partial<WebsiteSlotOverride>) => void;
   onRestore: () => void;
 }) {
@@ -51,7 +54,12 @@ export function WebsiteSlotMediaControls({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [localAudioAssets, setLocalAudioAssets] = useState(audioAssets);
-  const mediaType = override?.media_type ?? (override?.audio_asset_id ? "uploaded_audio" : override?.spotify_url ? "spotify" : "image");
+  const mediaType = override?.media_type
+    ?? (override?.audio_asset_id ? "uploaded_audio" : override?.spotify_url ? "spotify" : audioOnly ? null : "image");
+  const audioMedia = websiteSlotAudioMedia(override);
+  const selectedAudio = audioMedia?.media_type === "uploaded_audio"
+    ? override?.audio_asset ?? localAudioAssets.find((asset) => asset.id === audioMedia.audio_asset_id)
+    : null;
 
   const chooseImage = (asset: MediaAsset) => {
     onUpdate({
@@ -154,13 +162,13 @@ export function WebsiteSlotMediaControls({
     <div className="website-card-media-controls">
       <div className={`website-card-media-status website-card-media-status--${mediaType}`}>
         <span>Current media</span>
-        <strong>{mediaType === "spotify" ? "Spotify Player" : mediaType === "uploaded_audio" ? "Uploaded Audio" : "Image"}</strong>
+        <strong>{mediaType === "spotify" ? "Spotify Player" : mediaType === "uploaded_audio" ? "Uploaded Audio" : audioOnly ? "No audio" : "Image"}</strong>
       </div>
 
       <button type="button" className="website-card-media-change" onClick={() => setMode("choose")}>Change Media</button>
 
       {mode === "choose" && <div className="website-card-media-choices">
-        <button type="button" onClick={() => setMode("image")}><strong>Image</strong><span>Choose from the Media Library.</span></button>
+        {!audioOnly && <button type="button" onClick={() => setMode("image")}><strong>Image</strong><span>Choose from the Media Library.</span></button>}
         <button type="button" onClick={() => setMode("uploaded_audio")}><strong>Upload Audio File</strong><span>Upload or select existing audio.</span></button>
         <button type="button" onClick={() => setMode("spotify")}><strong>Spotify Player</strong><span>Add an official Spotify embed.</span></button>
         <button type="button" className="cms-text-button" onClick={() => setMode(null)}>Cancel</button>
@@ -196,7 +204,14 @@ export function WebsiteSlotMediaControls({
         <div className="website-card-media-panel__actions"><button type="button" className="btn" disabled={loading || !spotifyUrl.trim()} onClick={() => void addSpotify()}>{loading ? "Validating…" : "Add Player"}</button><button type="button" className="btn btn-secondary" disabled={loading} onClick={() => { setMode("choose"); setError(""); }}>Cancel</button></div>
       </div>}
 
-      {(mediaType === "spotify" || mediaType === "uploaded_audio") && <>
+      {audioOnly && audioMedia && (
+        <div className="website-card-audio-preview">
+          <span>Preview</span>
+          <PortfolioAudioPlayer media={audioMedia} audioAsset={selectedAudio} className="portfolio-audio-card--editor" />
+        </div>
+      )}
+
+      {!audioOnly && (mediaType === "spotify" || mediaType === "uploaded_audio") && <>
         <label className="field"><span>Optional title</span><input className="input" value={override?.title ?? ""} onChange={(event) => onUpdate({ title: event.target.value })} maxLength={160} /></label>
         <label className="field"><span>Optional role</span><input className="input" value={override?.role ?? ""} onChange={(event) => onUpdate({ role: event.target.value })} maxLength={120} /></label>
         <label className="field"><span>Optional caption</span><textarea className="input" value={override?.caption ?? ""} onChange={(event) => onUpdate({ caption: event.target.value })} maxLength={500} /></label>
@@ -207,6 +222,7 @@ export function WebsiteSlotMediaControls({
         <button type="button" className="website-slot-layout__reset" onClick={onRestore}>Restore original image</button>
       </>}
 
+      {audioOnly && audioMedia && <button type="button" className="website-slot-layout__reset" onClick={onRestore}>Remove media</button>}
       {mediaType === "image" && <label className="field"><span>Alt text</span><textarea className="input" value={override?.alt ?? selected.alt ?? ""} onChange={(event) => onUpdate({ alt: event.target.value })} /></label>}
     </div>
   );

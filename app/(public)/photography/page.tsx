@@ -85,7 +85,6 @@ export function PhotographyPageView() {
                 <div>
                   <p>{item.description}</p>
                   <h3>{item.title}</h3>
-                  <span aria-hidden="true">→</span>
                 </div>
               </Link>
             ))}

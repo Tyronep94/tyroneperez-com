@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CtaBanner } from "@/components/public/cta-banner";
 import { PageRuntime } from "@/components/public/page-runtime";
+import { FeaturedSoundList } from "@/components/public/featured-sound-list";
 import { TemplateImage } from "@/components/public/template-image";
 import { ServiceList } from "@/components/public/service-list";
 import { musicContent, portfolioItems } from "@/content/public-site";
@@ -74,21 +75,7 @@ export function MusicPageView() {
                 height={941}
               />
             </div>
-            <div className="music-project-list">
-            {musicWork.map((item) => (
-              <article key={item.slug}>
-                <span className="music-project-list__number">{String(item.sortOrder).padStart(2, "0")}</span>
-                <div className="music-project-list__copy">
-                  <p>{item.client}</p>
-                  <h3>{item.title}</h3>
-                </div>
-                <button type="button" disabled aria-label={`Audio for ${item.title} will be added later`}>
-                  <span aria-hidden="true">▶</span>
-                </button>
-                <Link href={`/portfolio/${item.slug}`} aria-label={`View project notes for ${item.title}`}>→</Link>
-              </article>
-            ))}
-            </div>
+            <FeaturedSoundList items={musicWork} />
           </div>
         </div>
       </section>
