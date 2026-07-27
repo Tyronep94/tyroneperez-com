@@ -4,14 +4,15 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { autosaveContent, type CmsActionState } from "@/app/admin/content/actions";
 import { RichTextEditor } from "@/components/cms/rich-text-editor";
-import type { ContentEntry, RichTextNode } from "@/types/cms";
-import { emptyDocument } from "@/types/cms";
+import { PortfolioAudioEditor } from "@/components/cms/portfolio-audio-editor";
+import type { ContentEntry, MediaAsset, PortfolioAudioMedia, RichTextNode } from "@/types/cms";
+import { emptyDocument, portfolioAudioMedia } from "@/types/cms";
 import { formatDateTimeLocal } from "@/lib/utils/dates";
 
 const initialState: CmsActionState = {};
 type SaveAction = (state: CmsActionState, data: FormData) => Promise<CmsActionState>;
 
-export function ContentEditor({ entry, action, deleteAction, collections = [], selectedCollections = [], media = [] }: { entry?: ContentEntry; action: SaveAction; deleteAction?: () => Promise<void>; collections?: Array<{id:string;name:string}>; selectedCollections?: string[]; media?: Array<{id:string;title:string}> }) {
+export function ContentEditor({ entry, action, deleteAction, collections = [], selectedCollections = [], media = [], audioMedia = [] }: { entry?: ContentEntry; action: SaveAction; deleteAction?: () => Promise<void>; collections?: Array<{id:string;name:string}>; selectedCollections?: string[]; media?: MediaAsset[]; audioMedia?: MediaAsset[] }) {
   const storageKey = `tpc-cms-${entry?.id ?? "new"}`;
   const [state, formAction, pending] = useActionState(action, initialState);
   const [title, setTitle] = useState(entry?.title ?? "");
@@ -19,9 +20,11 @@ export function ContentEditor({ entry, action, deleteAction, collections = [], s
   const [content, setContent] = useState<RichTextNode>(entry?.content ?? emptyDocument);
   const [seoTitle, setSeoTitle] = useState(entry?.seo_title ?? "");
   const [seoDescription, setSeoDescription] = useState(entry?.seo_description ?? "");
+  const [kind, setKind] = useState(entry?.kind ?? "portfolio");
+  const [audio, setAudio] = useState<PortfolioAudioMedia | null>(entry ? portfolioAudioMedia(entry) : null);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved");
   const hydrated = useRef(false);
-  const autosavePayload = useMemo(() => ({ title, excerpt, content, seo_title: seoTitle, seo_description: seoDescription }), [title, excerpt, content, seoTitle, seoDescription]);
+  const autosavePayload = useMemo(() => ({ title, excerpt, content, seo_title: seoTitle, seo_description: seoDescription, audio_media: audio }), [title, excerpt, content, seoTitle, seoDescription, audio]);
 
   useEffect(() => {
     const local = window.localStorage.getItem(storageKey);
@@ -34,6 +37,7 @@ export function ContentEditor({ entry, action, deleteAction, collections = [], s
           if (draft.content) setContent(draft.content);
           if (draft.seo_title !== undefined) setSeoTitle(draft.seo_title);
           if (draft.seo_description !== undefined) setSeoDescription(draft.seo_description);
+          if (draft.audio_media !== undefined) setAudio(draft.audio_media);
         } catch { window.localStorage.removeItem(storageKey); }
       }
       hydrated.current = true;
@@ -60,6 +64,18 @@ export function ContentEditor({ entry, action, deleteAction, collections = [], s
   return (
     <form action={formAction} className="cms-edit-layout">
       <input type="hidden" name="content" value={JSON.stringify(content)} />
+      <input type="hidden" name="media_type" value={audio?.media_type ?? ""} />
+      <input type="hidden" name="audio_asset_id" value={audio?.audio_asset_id ?? ""} />
+      <input type="hidden" name="audio_title" value={audio?.audio_title ?? ""} />
+      <input type="hidden" name="audio_role" value={audio?.audio_role ?? ""} />
+      <input type="hidden" name="audio_caption" value={audio?.audio_caption ?? ""} />
+      <input type="hidden" name="audio_artwork_asset_id" value={audio?.audio_artwork_asset_id ?? ""} />
+      <input type="hidden" name="spotify_url" value={audio?.media_type === "spotify" ? audio.spotify_url : ""} />
+      <input type="hidden" name="spotify_entity_type" value={audio?.media_type === "spotify" ? audio.spotify_entity_type : ""} />
+      <input type="hidden" name="spotify_entity_id" value={audio?.media_type === "spotify" ? audio.spotify_entity_id : ""} />
+      <input type="hidden" name="spotify_embed_url" value={audio?.media_type === "spotify" ? audio.spotify_embed_url : ""} />
+      <input type="hidden" name="spotify_title" value={audio?.media_type === "spotify" ? audio.spotify_title ?? "" : ""} />
+      <input type="hidden" name="spotify_thumbnail_url" value={audio?.media_type === "spotify" ? audio.spotify_thumbnail_url ?? "" : ""} />
       <section className="cms-edit-main">
         <div className="cms-edit-bar">
           <Link href="/admin/content" className="cms-back">← Content</Link>
@@ -82,6 +98,7 @@ export function ContentEditor({ entry, action, deleteAction, collections = [], s
           <label>Story</label>
           <RichTextEditor value={content} onChange={setContent} />
         </div>
+        {kind === "portfolio" && <PortfolioAudioEditor value={audio} onChange={setAudio} audioAssets={audioMedia} artworkAssets={media} />}
       </section>
       <aside className="cms-edit-sidebar">
         <div className="cms-publish-card">
@@ -97,7 +114,7 @@ export function ContentEditor({ entry, action, deleteAction, collections = [], s
         </div>
         <details className="cms-settings" open>
           <summary>Content settings</summary>
-          <label className="field"><span>Type</span><select className="input" name="kind" defaultValue={entry?.kind ?? "portfolio"}><option value="portfolio">Portfolio</option><option value="page">Page</option><option value="album">Album</option><option value="song">Song</option></select></label>
+          <label className="field"><span>Type</span><select className="input" name="kind" value={kind} onChange={event => setKind(event.target.value as typeof kind)}><option value="portfolio">Portfolio</option><option value="page">Page</option><option value="album">Album</option><option value="song">Song</option></select></label>
           <label className="field"><span>Slug</span><input className="input" name="slug" defaultValue={slugDefault} placeholder="project-name" required /></label>
           <label className="field"><span>Category</span><input className="input" name="category" defaultValue={entry?.category ?? ""} placeholder="Photography" /></label>
           <label className="field"><span>Cover image</span><select className="input" name="cover_asset_id" defaultValue={entry?.cover_asset_id ?? ""}><option value="">No cover image</option>{media.map(asset => <option value={asset.id} key={asset.id}>{asset.title}</option>)}</select></label>

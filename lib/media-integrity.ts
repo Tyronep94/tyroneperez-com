@@ -12,9 +12,11 @@ export type MediaIntegrityIssue = {
 };
 
 export function websiteDocumentMediaReferences(document: WebsitePageDocument) {
-  return Object.entries(document.slots).flatMap(([slotId, slot]) => slot.assetId
-    ? [{ slotId, assetId: slot.assetId, filename: slot.asset?.filename ?? "Unknown asset", storagePath: slot.asset?.storage_path ?? "" }]
-    : []);
+  return Object.entries(document.slots).flatMap(([slotId, slot]) => [
+    slot.assetId && { slotId, assetId: slot.assetId, filename: slot.asset?.filename ?? "Unknown asset", storagePath: slot.asset?.storage_path ?? "" },
+    slot.audio_asset_id && { slotId, assetId: slot.audio_asset_id, filename: slot.audio_asset?.filename ?? "Unknown audio asset", storagePath: slot.audio_asset?.storage_path ?? "" },
+    slot.artwork_asset_id && { slotId, assetId: slot.artwork_asset_id, filename: slot.artwork_asset?.filename ?? "Unknown artwork asset", storagePath: slot.artwork_asset?.storage_path ?? "" },
+  ].filter((reference): reference is { slotId: string; assetId: string; filename: string; storagePath: string } => Boolean(reference)));
 }
 
 export async function storageObjectExists(supabase: SupabaseClient, storagePath: string) {

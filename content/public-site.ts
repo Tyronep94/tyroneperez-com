@@ -1,4 +1,4 @@
-import type { MediaAsset } from "@/types/cms";
+import type { MediaAsset, PortfolioAudioMedia } from "@/types/cms";
 
 export type Service = {
   title: string;
@@ -20,6 +20,9 @@ export type PortfolioItem = {
   format: "portrait" | "landscape" | "square" | "wide";
   palette: "cognac" | "noir" | "sand" | "sage" | "clay" | "ink";
   coverAsset?: MediaAsset;
+  audioArtworkAsset?: MediaAsset;
+  audioAsset?: MediaAsset;
+  audioMedia?: PortfolioAudioMedia;
 };
 
 export const publicSite = {

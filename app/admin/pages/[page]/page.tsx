@@ -35,7 +35,7 @@ export default async function WebsitePageEditorPage({ params }: { params: Promis
   const [{ data: draft }, { data: publication }, { data: assets }] = await Promise.all([
     supabase.from("website_page_drafts").select("document").eq("page_key", page).maybeSingle(),
     supabase.from("website_page_publications").select("document").eq("page_key", page).maybeSingle(),
-    supabase.from("media_assets").select("*").eq("kind", "image").order("created_at", { ascending: false }).limit(1000),
+    supabase.from("media_assets").select("*").in("kind", ["image", "audio"]).order("created_at", { ascending: false }).limit(1000),
   ]);
   const initialDocument = (draft?.document ?? publication?.document ?? emptyWebsitePageDocument(page)) as WebsitePageDocument;
   const [draftIssues, publicationIssues] = await Promise.all([

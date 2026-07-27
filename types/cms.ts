@@ -1,6 +1,27 @@
 export type ContentStatus = "draft" | "scheduled" | "published" | "archived";
 export type ContentKind = "page" | "portfolio" | "album" | "song";
 export type MediaKind = "image" | "audio" | "video" | "document";
+export type SpotifyEntityType = "track" | "album" | "playlist" | "artist" | "show" | "episode";
+
+type PortfolioAudioBase = {
+  audio_asset_id: string | null;
+  audio_title: string;
+  audio_role: string;
+  audio_caption: string;
+  audio_artwork_asset_id: string | null;
+};
+
+export type PortfolioAudioMedia =
+  | (PortfolioAudioBase & { media_type: "uploaded_audio" })
+  | (PortfolioAudioBase & {
+      media_type: "spotify";
+      spotify_url: string;
+      spotify_entity_type: SpotifyEntityType;
+      spotify_entity_id: string;
+      spotify_embed_url: string;
+      spotify_title: string | null;
+      spotify_thumbnail_url: string | null;
+    });
 
 export type RichTextNode = {
   type: string;
@@ -30,11 +51,57 @@ export type ContentEntry = {
   robots: string;
   scheduled_for: string | null;
   published_at: string | null;
+  media_type: "uploaded_audio" | "spotify" | null;
+  audio_asset_id: string | null;
+  audio_title: string | null;
+  audio_role: string | null;
+  audio_caption: string | null;
+  audio_artwork_asset_id: string | null;
+  spotify_url: string | null;
+  spotify_entity_type: SpotifyEntityType | null;
+  spotify_entity_id: string | null;
+  spotify_embed_url: string | null;
+  spotify_title: string | null;
+  spotify_thumbnail_url: string | null;
   created_at: string;
   updated_at: string;
   og_asset?: Pick<MediaAsset, "public_url" | "width" | "height" | "alt_text"> | null;
   cover_asset?: MediaAsset | null;
+  audio_asset?: MediaAsset | null;
+  audio_artwork_asset?: MediaAsset | null;
 };
+
+export function portfolioAudioMedia(entry: ContentEntry): PortfolioAudioMedia | null {
+  const shared = {
+    audio_asset_id: entry.audio_asset_id,
+    audio_title: entry.audio_title ?? "",
+    audio_role: entry.audio_role ?? "",
+    audio_caption: entry.audio_caption ?? "",
+    audio_artwork_asset_id: entry.audio_artwork_asset_id,
+  };
+  if (entry.media_type === "uploaded_audio" && entry.audio_asset_id) {
+    return { media_type: "uploaded_audio", ...shared };
+  }
+  if (
+    entry.media_type === "spotify"
+    && entry.spotify_url
+    && entry.spotify_entity_type
+    && entry.spotify_entity_id
+    && entry.spotify_embed_url
+  ) {
+    return {
+      media_type: "spotify",
+      ...shared,
+      spotify_url: entry.spotify_url,
+      spotify_entity_type: entry.spotify_entity_type,
+      spotify_entity_id: entry.spotify_entity_id,
+      spotify_embed_url: entry.spotify_embed_url,
+      spotify_title: entry.spotify_title,
+      spotify_thumbnail_url: entry.spotify_thumbnail_url,
+    };
+  }
+  return null;
+}
 
 export type MediaAsset = {
   id: string;

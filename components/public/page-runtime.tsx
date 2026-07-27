@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { createContext, useContext, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type {
   WebsitePageDocument,
@@ -17,7 +17,14 @@ export type DiscoveredWebsiteSlot = {
   href?: string;
   src?: string;
   alt?: string;
+  mediaType?: WebsiteSlotOverride["media_type"];
 };
+
+const WebsitePageDocumentContext = createContext<WebsitePageDocument | null>(null);
+
+export function useWebsitePageDocument() {
+  return useContext(WebsitePageDocumentContext);
+}
 
 type OriginalElementState = {
   text: string;
@@ -33,10 +40,20 @@ type OriginalElementState = {
 };
 
 function slotType(element: HTMLElement): WebsiteSlotType {
+  if (element.dataset.pageMediaSlot) return "media";
   if (element instanceof HTMLImageElement) return "media";
   if (element instanceof HTMLAnchorElement) return "link";
   if (element instanceof HTMLButtonElement) return "button";
   return "text";
+}
+
+function editableSlotElement(target: EventTarget | null) {
+  const element = target as Element | null;
+  return element?.closest<HTMLElement>("[data-page-media-slot]")
+    ?? element?.closest<HTMLElement>("[data-page-link-target]")
+    ?? element?.closest<HTMLElement>("[data-page-content-target]")
+    ?? element?.closest<HTMLElement>("[data-page-slot]")
+    ?? null;
 }
 
 function editableText(element: HTMLElement) {
@@ -255,12 +272,16 @@ export function PageRuntime({
     const root = rootRef.current;
     if (!root) return;
     const counters: Record<WebsiteSlotType, number> = { text: 0, link: 0, button: 0, media: 0 };
-    const elements = [...root.querySelectorAll<HTMLElement>("h1,h2,h3,p,a[href],button,img")];
+    const elements = [...root.querySelectorAll<HTMLElement>("[data-page-media-slot],h1,h2,h3,p,a[href],button,img")]
+      .filter((element) => {
+        const mediaSlot = element.closest<HTMLElement>("[data-page-media-slot]");
+        return !mediaSlot || mediaSlot === element;
+      });
     for (const element of elements) {
       if (element.closest("[data-page-editor-ignore]")) continue;
       const type = slotType(element);
       const index = counters[type]++;
-      const id = `${pageKey}.${type}.${String(index + 1).padStart(2, "0")}`;
+      const id = element.dataset.pageMediaSlot ?? element.dataset.pageSlotId ?? `${pageKey}.${type}.${String(index + 1).padStart(2, "0")}`;
       element.dataset.pageSlot = id;
       element.dataset.pageSlotType = type;
       if (editing) {
@@ -273,7 +294,22 @@ export function PageRuntime({
         originalStates.current.set(element, original);
       }
       restoreOriginalState(element, original);
-      if (element instanceof HTMLImageElement && element.parentElement) {
+      if (element.dataset.pageMediaSlot) {
+        const image = element.querySelector<HTMLImageElement>("img");
+        const override = document.slots[id];
+        if (image && override?.media_type !== "spotify" && override?.media_type !== "uploaded_audio") {
+          applyOverride(image, override, element);
+        }
+        const layout = override?.layout;
+        Object.assign(element.style, {
+          width: layout?.width ?? "",
+          maxWidth: layout?.maxWidth ?? "",
+          marginTop: layout?.marginTop ?? "",
+          marginBottom: layout?.marginBottom ?? "",
+          padding: layout?.padding ?? "",
+          textAlign: layout?.textAlign ?? "",
+        });
+      } else if (element instanceof HTMLImageElement && element.parentElement) {
         const frame = element.parentElement;
         if (!originalFrameStyles.current.has(frame)) {
           originalFrameStyles.current.set(frame, frame.getAttribute("style"));
@@ -308,7 +344,7 @@ export function PageRuntime({
       className={`website-page-runtime${editing ? " website-page-runtime--editing" : ""}`}
       data-page-key={pageKey}
       onPointerOver={editing ? (event) => {
-        const element = (event.target as Element | null)?.closest<HTMLElement>("[data-page-slot]");
+        const element = editableSlotElement(event.target);
         const root = rootRef.current;
         if (!element || !root) return;
         const type = element.dataset.pageSlotType as WebsiteSlotType;
@@ -316,14 +352,14 @@ export function PageRuntime({
         const rootBounds = root.getBoundingClientRect();
         setHovered({
           id: element.dataset.pageSlot!,
-          label: type === "media" ? "Edit Photo" : type === "text" ? "Edit Text" : type === "link" ? "Edit Link" : "Edit Button",
+          label: type === "media" ? "Change Media" : type === "text" ? "Edit Text" : type === "link" ? "Edit Link" : "Edit Button",
           left: Math.max(8, bounds.left - rootBounds.left + 8),
           top: Math.max(8, bounds.top - rootBounds.top + 8),
         });
       } : undefined}
       onPointerLeave={editing ? () => setHovered(null) : undefined}
       onClickCapture={editing ? (event) => {
-        const element = (event.target as Element | null)?.closest<HTMLElement>("[data-page-slot]");
+        const element = editableSlotElement(event.target);
         if (!element) return;
         event.preventDefault();
         event.stopPropagation();
@@ -332,17 +368,19 @@ export function PageRuntime({
           id: element.dataset.pageSlot!,
           type,
           label: type === "media"
-            ? (element as HTMLImageElement).alt || "Image"
+            ? element.dataset.pageMediaLabel || "Portfolio media"
             : editableText(element).slice(0, 80) || `${type} slot`,
           text: editableText(element),
           href: element instanceof HTMLAnchorElement ? element.getAttribute("href") ?? "" : undefined,
-          src: element instanceof HTMLImageElement ? element.currentSrc || element.src : undefined,
-          alt: element instanceof HTMLImageElement ? element.alt : undefined,
+          src: element instanceof HTMLImageElement ? element.currentSrc || element.src : element.querySelector<HTMLImageElement>("img")?.currentSrc,
+          alt: element instanceof HTMLImageElement ? element.alt : element.querySelector<HTMLImageElement>("img")?.alt,
+          mediaType: (element.dataset.pageMediaType as WebsiteSlotOverride["media_type"] | undefined) ?? (element.dataset.pageMediaSlot ? "image" : undefined),
         });
       } : undefined}
       onPointerDown={editing ? (event) => {
-        const element = (event.target as Element | null)?.closest<HTMLImageElement>("img[data-page-slot]");
-        if (!element || element.dataset.pageSlot !== selectedId || element.parentElement?.dataset.pagePhotoDisplay !== "manual") return;
+        const element = (event.target as Element | null)?.closest<HTMLImageElement>("img");
+        const elementSlot = element?.closest<HTMLElement>("[data-page-media-slot]")?.dataset.pageMediaSlot ?? element?.dataset.pageSlot;
+        if (!element || elementSlot !== selectedId || element.parentElement?.dataset.pagePhotoDisplay !== "manual") return;
         const layout = document.slots[selectedId]?.layout;
         event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -373,13 +411,13 @@ export function PageRuntime({
       onPointerCancel={editing ? () => { manualDrag.current = null; } : undefined}
       onKeyDownCapture={editing ? (event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
-        const element = (event.target as Element | null)?.closest<HTMLElement>("[data-page-slot]");
+        const element = editableSlotElement(event.target);
         if (!element) return;
         event.preventDefault();
         element.click();
       } : undefined}
     >
-      {children}
+      <WebsitePageDocumentContext.Provider value={document}>{children}</WebsitePageDocumentContext.Provider>
       {editing && hovered && (
         <span
           className="website-page-slot-affordance"

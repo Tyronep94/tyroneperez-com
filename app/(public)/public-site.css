@@ -13,6 +13,29 @@
   color: var(--public-ink);
 }
 
+/* Responsive Portfolio audio players */
+.portfolio-audio-card--detail { margin-top: 18px; padding: clamp(18px, 3vw, 34px); border: 1px solid var(--public-line); background: var(--public-surface); }
+.portfolio-audio-card--detail .portfolio-audio-card__copy p,
+.portfolio-audio-card--index .portfolio-audio-card__copy p { color: var(--public-cognac); }
+.portfolio-audio-card--detail .portfolio-audio-card__copy span,
+.portfolio-audio-card--index .portfolio-audio-card__copy span { color: var(--public-muted); }
+.portfolio-audio-card--index { margin-top: 12px; padding: 14px; border: 1px solid var(--public-line); background: var(--public-surface); }
+.portfolio-index-item__artwork { aspect-ratio: 1; object-fit: cover; }
+.portfolio-index-item__external-link { align-self: end; color: inherit; text-decoration: none; }
+.portfolio-index-item .spotify-player { max-width: 100%; }
+.portfolio-index-item .spotify-player iframe { max-height: 352px; }
+.portfolio-index-item__media { min-width: 0; width: 100%; position: relative; overflow: visible; }
+.portfolio-index-item__media--spotify,
+.portfolio-index-item__media--uploaded_audio { display: grid; gap: 12px; }
+.portfolio-index-item__media-destination { display: inline-block; margin-top: 10px; color: var(--public-muted); font-size: .62rem; text-decoration: underline; text-underline-offset: 4px; }
+.portfolio-index-item__media iframe { position: relative; z-index: 2; pointer-events: auto; }
+.website-page-runtime:not(.website-page-runtime--editing) .portfolio-index-item__media::after { display: none; content: none; pointer-events: none; }
+.website-page-runtime--editing .portfolio-index-item__media { cursor: pointer; outline-offset: 5px; }
+@media (max-width: 540px) {
+  .portfolio-audio-card--detail { padding: 12px; }
+  .spotify-player iframe { border-radius: 9px; }
+}
+
 .public-site main { min-height: 60vh; }
 .public-site h1,
 .public-site h2,
@@ -903,27 +926,6 @@
   .start-options article { min-height: 300px; }
 }
 
-.portfolio-collections {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 28px;
-}
-.portfolio-collections a {
-  border: 1px solid var(--public-line);
-  border-radius: 999px;
-  padding: 8px 13px;
-  color: var(--public-muted);
-  font-size: .62rem;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-.portfolio-collections a:hover,
-.portfolio-collections a:focus-visible {
-  border-color: var(--public-ink);
-  color: var(--public-ink);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .public-site *,
   .public-site *::before,
@@ -1313,8 +1315,23 @@
 .index-hero h1 {
   font-size: clamp(4rem, 7.5vw, 8rem);
 }
+.portfolio-index-hero {
+  padding-block: clamp(3.75rem, 6vw, 6rem);
+}
+.portfolio-index-hero h1 {
+  max-width: 820px;
+  font-size: clamp(3rem, 5.5vw, 4.75rem);
+  line-height: .98;
+  text-wrap: balance;
+}
+.portfolio-index {
+  padding-top: clamp(3.5rem, 6vw, 6rem);
+}
 .portfolio-filters {
   margin-bottom: clamp(4rem, 6vw, 6rem);
+}
+.portfolio-index .portfolio-filters {
+  margin-bottom: clamp(2.75rem, 4vw, 4rem);
 }
 .portfolio-filters button {
   border: 0;

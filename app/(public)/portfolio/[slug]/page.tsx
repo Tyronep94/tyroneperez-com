@@ -9,6 +9,8 @@ import { getPublishedGallery, getPublishedPortfolioEntry } from "@/lib/database/
 import { RichContent } from "@/components/cms/rich-content";
 import { CmsImage } from "@/components/cms/cms-image";
 import { GalleryPage } from "@/components/public/gallery-page";
+import { PortfolioAudioPlayer } from "@/components/public/portfolio-audio-player";
+import { portfolioAudioMedia } from "@/types/cms";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
@@ -33,9 +35,10 @@ export default async function PortfolioDetailPage({ params }: PageProps) {
   if (cmsItem) {
     const gallery = await getPublishedGallery(cmsItem.id);
     if (gallery) return <GalleryPage entry={cmsItem} layout={gallery.layout} settings={gallery.settings} />;
-    const mediaType = cmsItem.kind === "album" || cmsItem.kind === "song" ? "audio" : "image";
+    const audio = portfolioAudioMedia(cmsItem);
+    const mediaType = audio || cmsItem.kind === "album" || cmsItem.kind === "song" ? "audio" : "image";
     return <main id="main-content" className={`project-page project-page--${mediaType}`}>
-      <section className="project-hero"><div className="public-container"><Link href="/portfolio" className="public-text-link project-back">Back to portfolio</Link><div className="project-hero__copy"><p className="public-kicker">{cmsItem.category || "Selected work"}</p><h1>{cmsItem.title}</h1>{cmsItem.excerpt && <p>{cmsItem.excerpt}</p>}</div>{cmsItem.cover_asset ? <CmsImage asset={cmsItem.cover_asset} className="cms-project-cover" sizes="(max-width: 1320px) calc(100vw - 40px), 1280px" priority /> : <MediaPlaceholder item={{title:cmsItem.title,mediaType,format:"wide",palette:"noir"}} />}</div></section>
+      <section className="project-hero"><div className="public-container"><Link href="/portfolio" className="public-text-link project-back">Back to portfolio</Link><div className="project-hero__copy"><p className="public-kicker">{cmsItem.category || "Selected work"}</p><h1>{cmsItem.title}</h1>{cmsItem.excerpt && <p>{cmsItem.excerpt}</p>}</div>{cmsItem.audio_artwork_asset || cmsItem.cover_asset ? <CmsImage asset={(cmsItem.audio_artwork_asset || cmsItem.cover_asset)!} className="cms-project-cover" sizes="(max-width: 1320px) calc(100vw - 40px), 1280px" priority /> : !audio && <MediaPlaceholder item={{title:cmsItem.title,mediaType,format:"wide",palette:"noir"}} />}{audio && <PortfolioAudioPlayer media={audio} audioAsset={cmsItem.audio_asset} className="portfolio-audio-card--detail" />}</div></section>
       <section className="project-story public-section"><div className="public-container project-story__grid"><div><p className="public-kicker">Project story</p><h2>The work behind the work.</h2></div><RichContent document={cmsItem.content} /></div></section>
       <CtaBanner heading={`Have a ${(cmsItem.category || "creative").toLowerCase()} project in mind?`} />
     </main>;

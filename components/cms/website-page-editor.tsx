@@ -9,6 +9,7 @@ import { SiteFooter } from "@/components/public/site-footer";
 import { SiteHeader } from "@/components/public/site-header";
 import type { MediaAsset } from "@/types/cms";
 import type { MediaIntegrityIssue } from "@/lib/media-integrity";
+import { WebsiteSlotMediaControls } from "@/components/cms/website-slot-media-controls";
 import {
   websitePageMeta,
   type WebsitePageDocument,
@@ -50,6 +51,8 @@ export function WebsitePageEditor({
   const filteredAssets = useMemo(() => assets.filter((asset) =>
     asset.kind === "image" && `${asset.title} ${asset.filename}`.toLowerCase().includes(query.toLowerCase()),
   ), [assets, query]);
+  const imageAssets = useMemo(() => assets.filter((asset) => asset.kind === "image"), [assets]);
+  const audioAssets = useMemo(() => assets.filter((asset) => asset.kind === "audio"), [assets]);
 
   const commitDocument = useCallback((next: WebsitePageDocument) => {
     setUndoStack((history) => [...history, clone(document)].slice(-50));
@@ -220,7 +223,8 @@ export function WebsitePageEditor({
             <button onClick={redo} disabled={!redoStack.length} aria-label="Redo last page change">Redo</button>
           </span>
           <button onClick={() => void save()} disabled={busy}>Save draft</button>
-          <Link href={page.path} target="_blank">View page ↗</Link>
+          <Link href={`/preview/pages/${pageKey}`} target="_blank">Private preview ↗</Link>
+          <Link href={page.path} target="_blank">View published ↗</Link>
           <button className="website-page-editor__publish" onClick={publish} disabled={busy}>Publish</button>
         </div>
       </header>
@@ -264,7 +268,16 @@ export function WebsitePageEditor({
                   onChange={(event) => updateSelected({ href: event.target.value })}
                 />
               </label>}
-              {selected.type === "media" && <>
+              {selected.type === "media" && pageKey === "portfolio" && <WebsiteSlotMediaControls
+                key={selected.id}
+                selected={selected}
+                override={selectedOverride}
+                imageAssets={imageAssets}
+                audioAssets={audioAssets}
+                onUpdate={updateSelected}
+                onRestore={restoreSelectedContent}
+              />}
+              {selected.type === "media" && pageKey !== "portfolio" && <>
                 <label className="field"><span>Alt text</span><textarea className="input" value={selectedOverride?.alt ?? selected.alt ?? ""} onChange={(event) => updateSelected({ alt: event.target.value })} /></label>
                 <label className="field"><span>Find a photo</span><input className="input" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Media Library" /></label>
                 <div className="website-page-editor__media-grid">
@@ -274,7 +287,7 @@ export function WebsitePageEditor({
                   </button>)}
                 </div>
               </>}
-              {selectedOverride && (
+              {selectedOverride && !(pageKey === "portfolio" && selected.type === "media") && (
                 <button className="website-slot-layout__reset" onClick={restoreSelectedContent}>
                   Restore original content
                 </button>

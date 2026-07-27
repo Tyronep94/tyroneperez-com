@@ -67,7 +67,7 @@ tr:last-child td { border-bottom:0; }
 .cms-project-cover{display:block;width:100%;height:auto;max-height:none;aspect-ratio:auto;object-fit:contain;background:transparent}
 .cms-danger-zone{border:1px solid #dfc0bc;border-radius:14px;padding:16px;background:#fff9f8}.cms-danger-zone strong{font-size:12px;color:#7f2929}.cms-danger-zone p{font-size:10px;line-height:1.5;color:var(--muted)}.cms-danger-zone button{border:0;background:transparent;color:#7f2929;padding:0;font-size:11px;text-decoration:underline;text-underline-offset:3px}.cms-collection-card>div{display:flex;justify-content:space-between;align-items:center}.cms-collection-card form{margin:0}.cms-collection-card button{border:0;background:transparent;color:#8a3d36;font-size:9px;text-decoration:underline}
 @media(max-width:979px){.cms-edit-layout{margin:-44px -36px -70px;grid-template-columns:1fr}.cms-edit-sidebar{border-left:0;border-top:1px solid var(--line)}}
-@media(max-width:739px){.cms-page-header{align-items:flex-start;flex-direction:column}.cms-row-meta>span,.cms-row-meta time{display:none}.cms-edit-layout{margin:-24px -18px -104px}.cms-edit-main{padding:24px 18px 70px}.cms-edit-bar{margin-bottom:30px}.cms-media-grid,.cms-collection-grid,.cms-service-grid{grid-template-columns:1fr}.cms-library-tools{grid-template-columns:1fr 1fr}.cms-library-tools input{grid-column:1/-1}.cms-two-column,.cms-analytics-grid,.cms-asset-inspector{grid-template-columns:1fr}.cms-create-card{position:static}.cms-metric-grid{grid-template-columns:1fr 1fr}.cms-search-results>a{grid-template-columns:72px 1fr auto}.cms-bulk-bar{flex-wrap:wrap}.cms-bulk-bar strong{width:100%}.preview-bar span{display:none}}
+@media(max-width:739px){.cms-page-header{align-items:flex-start;flex-direction:column}.cms-row-meta>span,.cms-row-meta time{display:none}.cms-edit-layout{width:100vw;max-width:100vw;margin:-24px -18px -104px}.cms-edit-main,.cms-edit-sidebar{min-width:0;width:100%}.cms-edit-main{padding:24px 18px 70px}.cms-edit-bar{margin-bottom:30px}.cms-media-grid,.cms-collection-grid,.cms-service-grid{grid-template-columns:1fr}.cms-library-tools{grid-template-columns:1fr 1fr}.cms-library-tools input{grid-column:1/-1}.cms-two-column,.cms-analytics-grid,.cms-asset-inspector{grid-template-columns:1fr}.cms-create-card{position:static}.cms-metric-grid{grid-template-columns:1fr 1fr}.cms-search-results>a{grid-template-columns:72px 1fr auto}.cms-bulk-bar{flex-wrap:wrap}.cms-bulk-bar strong{width:100%}.preview-bar span{display:none}}
 .cms-library-tools{grid-template-columns:minmax(180px,1fr) 130px 130px 130px auto}
 @media(max-width:739px){.cms-library-tools{grid-template-columns:1fr 1fr}.cms-library-tools input{grid-column:1/-1}}
 
@@ -182,3 +182,57 @@ tr:last-child td { border-bottom:0; }
 @media(max-width:1250px){.cms-media-grid--masonry{column-count:3}.cms-media-grid--compact{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:900px){.cms-media-grid--masonry{column-count:2}.cms-media-grid--compact{grid-template-columns:repeat(2,minmax(0,1fr))}.cms-library-tools{grid-template-columns:1fr 1fr}.cms-library-tools>input:first-child{grid-column:1/-1}}
 @media(max-width:600px){.cms-media-grid--masonry{column-count:1}.cms-media-grid--compact{grid-template-columns:1fr}.cms-library-tools{grid-template-columns:1fr}.cms-library-tools>input:first-child{grid-column:auto}.cms-media-viewbar{align-items:flex-start;flex-direction:column}.cms-media-viewbar>div{width:100%}.cms-media-viewbar button{flex:1}.cms-asset-actions{opacity:1}}
+
+/* Portfolio audio and Spotify editor. */
+.portfolio-audio-editor{display:grid;gap:16px;margin-top:34px;padding-top:28px;border-top:1px solid var(--line)}
+.portfolio-audio-editor__heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.portfolio-audio-editor__heading>div:first-child{display:grid;gap:5px}
+.portfolio-audio-editor__heading span{font-size:11px;font-weight:750}
+.portfolio-audio-editor__heading small{color:var(--muted);font-size:10px}
+.portfolio-audio-editor__history{display:flex;gap:5px}
+.portfolio-audio-editor__history button,.portfolio-audio-editor__actions button{border:1px solid var(--line);border-radius:7px;background:white;padding:7px 10px;font-size:9px}
+.portfolio-audio-editor__history button:disabled{opacity:.35}
+.portfolio-audio-editor__add{min-height:110px;border:1px dashed #aaa49a;border-radius:14px;background:#faf8f3;color:#5f5b54;font:400 17px Georgia,serif}
+.portfolio-audio-choice{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.portfolio-audio-choice>button:not(.cms-text-button){min-height:120px;display:grid;align-content:center;gap:8px;border:1px solid var(--line);border-radius:13px;padding:20px;background:white;text-align:left}
+.portfolio-audio-choice strong{font:400 19px Georgia,serif}
+.portfolio-audio-choice span{color:var(--muted);font-size:10px;line-height:1.5}
+.portfolio-audio-choice>.cms-text-button{grid-column:1/-1}
+.portfolio-audio-dialog{display:grid;gap:12px;border:1px solid var(--line);border-radius:14px;padding:20px;background:white}
+.portfolio-audio-dialog h3{margin:0;font:400 22px Georgia,serif}
+.portfolio-audio-dialog>.field{margin:0}
+.portfolio-audio-dialog>small{color:var(--muted);font-size:10px}
+.portfolio-audio-dialog>div:last-child{display:flex;gap:8px}
+.portfolio-audio-editor__card{min-width:0;display:grid;gap:18px;border:1px solid var(--line);border-radius:14px;padding:18px;background:#faf9f5}
+.portfolio-audio-editor__fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.portfolio-audio-editor__fields .field{margin:0}
+.portfolio-audio-editor__fields .span-2{grid-column:1/-1}
+.portfolio-audio-editor__actions{display:flex;justify-content:flex-end;gap:7px}
+.portfolio-audio-editor__actions button:first-child{color:#8a3d36}
+.portfolio-audio-card{min-width:0;width:100%;display:grid;gap:14px}
+.portfolio-audio-card__copy{min-width:0}
+.portfolio-audio-card__copy p{margin:0 0 6px;color:#9b5f39;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.portfolio-audio-card__copy h2{margin:0 0 7px;font:400 clamp(20px,3vw,32px) Georgia,serif}
+.portfolio-audio-card__copy span{display:block;color:#6d6962;font-size:11px;line-height:1.55}
+.portfolio-audio-card audio{display:block;width:100%;max-width:100%}
+.spotify-player{min-width:0;width:100%;overflow:hidden}
+.spotify-player iframe{display:block;width:100%;max-width:100%;border:0;border-radius:12px;background:#191414}
+.spotify-player>a{display:inline-block;margin-top:8px;color:inherit;font-size:10px;text-decoration:underline;text-underline-offset:3px}
+.portfolio-audio-card--editor{padding:16px;border-radius:12px;background:#eeece6}
+.portfolio-audio-card--editor .spotify-player iframe{max-height:352px}
+@media(max-width:620px){.portfolio-audio-choice,.portfolio-audio-editor__fields{grid-template-columns:1fr}.portfolio-audio-editor__fields .span-2{grid-column:auto}.portfolio-audio-editor__heading{align-items:flex-start}.portfolio-audio-dialog>div:last-child{flex-direction:column}}
+
+/* Portfolio card media controls in the shared page editor. */
+.website-card-media-controls{display:grid;gap:14px}
+.website-card-media-status{display:grid;gap:5px;border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff}
+.website-card-media-status span{color:var(--muted);font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.website-card-media-status strong{font:400 18px Georgia,serif}
+.website-card-media-status--spotify{border-color:#1db954;background:#f1fbf5}
+.website-card-media-change{min-height:42px;border:1px solid #1d1c19;border-radius:8px;background:#1d1c19;color:#fff;font-size:10px;font-weight:700}
+.website-card-media-choices{display:grid;gap:7px}
+.website-card-media-choices>button:not(.cms-text-button){display:grid;gap:4px;border:1px solid var(--line);border-radius:9px;padding:12px;background:#fff;text-align:left}
+.website-card-media-choices strong{font-size:10px}.website-card-media-choices span{color:var(--muted);font-size:8px}
+.website-card-media-panel{display:grid;gap:11px;border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff}
+.website-card-media-panel h3{margin:0;font:400 18px Georgia,serif}
+.website-card-media-panel .field{margin:0}.website-card-media-panel>small{color:var(--muted);font-size:8px;line-height:1.5}
+.website-card-media-panel__actions{display:flex;gap:6px}.website-card-media-panel__actions .btn{flex:1}
