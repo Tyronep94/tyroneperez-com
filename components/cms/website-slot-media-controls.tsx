@@ -36,6 +36,7 @@ export function WebsiteSlotMediaControls({
   imageAssets,
   audioAssets,
   audioOnly = false,
+  imageOnly = false,
   onUpdate,
   onRestore,
 }: {
@@ -44,6 +45,7 @@ export function WebsiteSlotMediaControls({
   imageAssets: MediaAsset[];
   audioAssets: MediaAsset[];
   audioOnly?: boolean;
+  imageOnly?: boolean;
   onUpdate: (patch: Partial<WebsiteSlotOverride>) => void;
   onRestore: () => void;
 }) {
@@ -161,20 +163,29 @@ export function WebsiteSlotMediaControls({
   return (
     <div className="website-card-media-controls">
       <div className={`website-card-media-status website-card-media-status--${mediaType}`}>
-        <span>Current media</span>
-        <strong>{mediaType === "spotify" ? "Spotify Player" : mediaType === "uploaded_audio" ? "Uploaded Audio" : audioOnly ? "No audio" : "Image"}</strong>
+        <span>{imageOnly ? "Current image" : "Current media"}</span>
+        <strong>{imageOnly
+          ? override?.asset?.title || "Placeholder"
+          : mediaType === "spotify" ? "Spotify Player" : mediaType === "uploaded_audio" ? "Uploaded Audio" : audioOnly ? "No audio" : "Image"}</strong>
       </div>
 
-      <button type="button" className="website-card-media-change" onClick={() => setMode("choose")}>Change Media</button>
+      <button
+        type="button"
+        className="website-card-media-change"
+        onClick={() => setMode(imageOnly ? "image" : "choose")}
+      >
+        {imageOnly ? "Replace image" : "Change Media"}
+      </button>
 
       {mode === "choose" && <div className="website-card-media-choices">
         {!audioOnly && <button type="button" onClick={() => setMode("image")}><strong>Image</strong><span>Choose from the Media Library.</span></button>}
-        <button type="button" onClick={() => setMode("uploaded_audio")}><strong>Upload Audio File</strong><span>Upload or select existing audio.</span></button>
-        <button type="button" onClick={() => setMode("spotify")}><strong>Spotify Player</strong><span>Add an official Spotify embed.</span></button>
+        {!imageOnly && <button type="button" onClick={() => setMode("uploaded_audio")}><strong>Upload Audio File</strong><span>Upload or select existing audio.</span></button>}
+        {!imageOnly && <button type="button" onClick={() => setMode("spotify")}><strong>Spotify Player</strong><span>Add an official Spotify embed.</span></button>}
         <button type="button" className="cms-text-button" onClick={() => setMode(null)}>Cancel</button>
       </div>}
 
       {mode === "image" && <div className="website-card-media-panel">
+        <h3>Choose from Media Library</h3>
         <label className="field"><span>Find an image</span><input className="input" type="search" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
         <div className="website-page-editor__media-grid">
           {filteredImages.slice(0, 80).map((asset) => <button type="button" key={asset.id} onClick={() => chooseImage(asset)}>
@@ -182,7 +193,7 @@ export function WebsiteSlotMediaControls({
             <span>{asset.title}</span>
           </button>)}
         </div>
-        <button type="button" className="cms-text-button" onClick={() => setMode("choose")}>Cancel</button>
+        <button type="button" className="cms-text-button" onClick={() => setMode(imageOnly ? null : "choose")}>Cancel</button>
       </div>}
 
       {mode === "uploaded_audio" && <div className="website-card-media-panel">
@@ -223,6 +234,7 @@ export function WebsiteSlotMediaControls({
       </>}
 
       {audioOnly && audioMedia && <button type="button" className="website-slot-layout__reset" onClick={onRestore}>Remove media</button>}
+      {imageOnly && override?.assetId && <button type="button" className="website-slot-layout__reset" onClick={onRestore}>Remove override / Restore placeholder</button>}
       {mediaType === "image" && <label className="field"><span>Alt text</span><textarea className="input" value={override?.alt ?? selected.alt ?? ""} onChange={(event) => onUpdate({ alt: event.target.value })} /></label>}
     </div>
   );

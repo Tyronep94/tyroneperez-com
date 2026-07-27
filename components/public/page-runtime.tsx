@@ -302,7 +302,8 @@ export function PageRuntime({
       if (element.dataset.pageMediaSlot) {
         const image = element.querySelector<HTMLImageElement>("img");
         const override = document.slots[id];
-        if (image && override?.media_type !== "spotify" && override?.media_type !== "uploaded_audio") {
+        const componentManagesMedia = element.dataset.pageMediaManaged === "true";
+        if (!componentManagesMedia && image && override?.media_type !== "spotify" && override?.media_type !== "uploaded_audio") {
           applyOverride(image, override, element);
         }
         const layout = override?.layout;

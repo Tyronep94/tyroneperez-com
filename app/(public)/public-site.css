@@ -727,7 +727,9 @@
   background: linear-gradient(150deg, #b88767, #e4cbb5);
   color: #4c3022;
 }
-.about-portrait::after { position: absolute; inset: 14px; content: ""; border: 1px solid currentColor; opacity: .25; }
+.about-portrait::after { position: absolute; inset: 14px; content: ""; border: 1px solid currentColor; opacity: .25; pointer-events: none; }
+.website-page-runtime--editing .about-portrait > * { pointer-events: none; }
+.about-portrait__image { width: 100%; height: 100%; position: absolute; inset: 0; object-fit: cover; }
 .about-portrait > div { width: 46%; aspect-ratio: .8; position: relative; border: 1px solid currentColor; border-radius: 50% 50% 42% 42%; }
 .about-portrait i:first-child { position: absolute; inset: 16% 20% auto; aspect-ratio: 1; border: 1px solid currentColor; border-radius: 50%; }
 .about-portrait i:last-child { position: absolute; inset: 60% 5% auto; height: 1px; background: currentColor; }

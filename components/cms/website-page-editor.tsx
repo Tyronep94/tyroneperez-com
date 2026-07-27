@@ -51,8 +51,11 @@ export function WebsitePageEditor({
   const selectedIsFeaturedSound = pageKey === "music"
     && selected?.type === "media"
     && selected.id.startsWith("music.featured-sound.");
+  const selectedIsAboutPortrait = pageKey === "about"
+    && selected?.type === "media"
+    && selected.id === "about.portrait";
   const selectedUsesRichMedia = selected?.type === "media"
-    && (pageKey === "portfolio" || selectedIsFeaturedSound);
+    && (pageKey === "portfolio" || selectedIsFeaturedSound || selectedIsAboutPortrait);
   const filteredAssets = useMemo(() => assets.filter((asset) =>
     asset.kind === "image" && `${asset.title} ${asset.filename}`.toLowerCase().includes(query.toLowerCase()),
   ), [assets, query]);
@@ -280,6 +283,7 @@ export function WebsitePageEditor({
                 imageAssets={imageAssets}
                 audioAssets={audioAssets}
                 audioOnly={selectedIsFeaturedSound}
+                imageOnly={selectedIsAboutPortrait}
                 onUpdate={updateSelected}
                 onRestore={restoreSelectedContent}
               />}

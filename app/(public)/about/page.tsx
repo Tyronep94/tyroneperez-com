@@ -1,4 +1,5 @@
 import { CtaBanner } from "@/components/public/cta-banner";
+import { AboutPortrait } from "@/components/public/about-portrait";
 import { PageRuntime } from "@/components/public/page-runtime";
 import { aboutContent } from "@/content/public-site";
 import { getPublishedWebsitePage } from "@/lib/database/website-pages";
@@ -19,10 +20,7 @@ export function AboutPageView() {
             <p className="public-kicker">{aboutContent.kicker}</p>
             <h1>{aboutContent.heading}</h1>
           </div>
-          <div className="about-portrait" role="img" aria-label="Portrait of Tyrone Perez placeholder; replace with an approved personal portrait">
-            <div aria-hidden="true"><i /><i /></div>
-            <span>Replace with Tyrone’s portrait</span>
-          </div>
+          <AboutPortrait />
           <div className="about-hero__intro">
             <p>{aboutContent.introduction}</p>
             <p className="replacement-note">{aboutContent.introductionNote}</p>
