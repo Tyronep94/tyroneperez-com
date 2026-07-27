@@ -21,9 +21,14 @@ export type DiscoveredWebsiteSlot = {
 };
 
 const WebsitePageDocumentContext = createContext<WebsitePageDocument | null>(null);
+const WebsitePageEditingContext = createContext(false);
 
 export function useWebsitePageDocument() {
   return useContext(WebsitePageDocumentContext);
+}
+
+export function useWebsitePageEditing() {
+  return useContext(WebsitePageEditingContext);
 }
 
 type OriginalElementState = {
@@ -417,7 +422,9 @@ export function PageRuntime({
         element.click();
       } : undefined}
     >
-      <WebsitePageDocumentContext.Provider value={document}>{children}</WebsitePageDocumentContext.Provider>
+      <WebsitePageDocumentContext.Provider value={document}>
+        <WebsitePageEditingContext.Provider value={editing}>{children}</WebsitePageEditingContext.Provider>
+      </WebsitePageDocumentContext.Provider>
       {editing && hovered && (
         <span
           className="website-page-slot-affordance"

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef } from "react";
-import { useWebsitePageDocument } from "@/components/public/page-runtime";
+import { useWebsitePageDocument, useWebsitePageEditing } from "@/components/public/page-runtime";
 import type { PortfolioItem } from "@/content/public-site";
 import type { PortfolioAudioMedia } from "@/types/cms";
 import { websiteSlotAudioMedia } from "@/types/website-editor";
@@ -60,6 +60,7 @@ function slotId(slug: string) {
 
 export function FeaturedSoundList({ items }: { items: PortfolioItem[] }) {
   const document = useWebsitePageDocument();
+  const editing = useWebsitePageEditing();
   const audioElements = useRef(new Map<string, HTMLAudioElement>());
   const spotifyHosts = useRef(new Map<string, HTMLDivElement>());
   const spotifyControllers = useRef(new Map<string, SpotifyEmbedController>());
@@ -171,7 +172,7 @@ export function FeaturedSoundList({ items }: { items: PortfolioItem[] }) {
               data-page-media-slot={id}
               data-page-media-label={`Featured Sound · ${item.title}`}
               data-page-media-type={media?.media_type ?? "uploaded_audio"}
-              disabled={!hasPlayableAudio}
+              disabled={!hasPlayableAudio && !editing}
               aria-label={hasPlayableAudio ? `Play ${item.title}` : `Audio for ${item.title} will be added later`}
               onClick={() => play(id, media)}
             >
