@@ -245,6 +245,9 @@ export function PageRuntime({
   selectedId = null,
   onSelect,
   onManualCropPosition,
+  onLayerPositionStart,
+  onLayerPositionChange,
+  onLayerPositionCommit,
   children,
 }: {
   pageKey: WebsitePageKey;
@@ -254,6 +257,9 @@ export function PageRuntime({
   selectedId?: string | null;
   onSelect?: (slot: DiscoveredWebsiteSlot) => void;
   onManualCropPosition?: (position: { manualX: number; manualY: number }) => void;
+  onLayerPositionStart?: () => void;
+  onLayerPositionChange?: (position: { positionX: number; positionY: number }) => void;
+  onLayerPositionCommit?: () => void;
   children: ReactNode;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -273,6 +279,7 @@ export function PageRuntime({
     startX: number;
     startY: number;
     element: HTMLImageElement;
+    displayMode: "layer" | "manual";
   } | null>(null);
 
   useLayoutEffect(() => {
@@ -388,17 +395,24 @@ export function PageRuntime({
       onPointerDown={editing ? (event) => {
         const element = (event.target as Element | null)?.closest<HTMLImageElement>("img");
         const elementSlot = element?.closest<HTMLElement>("[data-page-media-slot]")?.dataset.pageMediaSlot ?? element?.dataset.pageSlot;
-        if (!element || elementSlot !== selectedId || element.parentElement?.dataset.pagePhotoDisplay !== "manual") return;
+        const displayMode = element?.parentElement?.dataset.pagePhotoDisplay;
+        if (!element || elementSlot !== selectedId || (displayMode !== "layer" && displayMode !== "manual")) return;
         const layout = document.slots[selectedId]?.layout;
         event.preventDefault();
         event.currentTarget.setPointerCapture(event.pointerId);
+        if (displayMode === "layer") onLayerPositionStart?.();
         manualDrag.current = {
           pointerId: event.pointerId,
           x: event.clientX,
           y: event.clientY,
-          startX: layout?.manualX ?? 0,
-          startY: layout?.manualY ?? 0,
+          startX: displayMode === "layer"
+            ? layout?.positionX ?? ((layout?.manualX ?? 0) + 50)
+            : layout?.manualX ?? 0,
+          startY: displayMode === "layer"
+            ? layout?.positionY ?? ((layout?.manualY ?? 0) + 50)
+            : layout?.manualY ?? 0,
           element,
+          displayMode,
         };
       } : undefined}
       onPointerMove={editing ? (event) => {
@@ -406,17 +420,31 @@ export function PageRuntime({
         if (!drag || drag.pointerId !== event.pointerId) return;
         const bounds = drag.element.parentElement?.getBoundingClientRect();
         if (!bounds) return;
-        onManualCropPosition?.({
-          manualX: Math.max(-100, Math.min(100, drag.startX + ((event.clientX - drag.x) / Math.max(1, bounds.width)) * 100)),
-          manualY: Math.max(-100, Math.min(100, drag.startY + ((event.clientY - drag.y) / Math.max(1, bounds.height)) * 100)),
-        });
+        const deltaX = ((event.clientX - drag.x) / Math.max(1, bounds.width)) * 100;
+        const deltaY = ((event.clientY - drag.y) / Math.max(1, bounds.height)) * 100;
+        if (drag.displayMode === "layer") {
+          onLayerPositionChange?.({
+            positionX: Math.max(0, Math.min(100, drag.startX - deltaX)),
+            positionY: Math.max(0, Math.min(100, drag.startY - deltaY)),
+          });
+        } else {
+          onManualCropPosition?.({
+            manualX: Math.max(-100, Math.min(100, drag.startX + deltaX)),
+            manualY: Math.max(-100, Math.min(100, drag.startY + deltaY)),
+          });
+        }
       } : undefined}
       onPointerUp={editing ? (event) => {
-        if (manualDrag.current?.pointerId !== event.pointerId) return;
+        const drag = manualDrag.current;
+        if (drag?.pointerId !== event.pointerId) return;
         manualDrag.current = null;
         if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+        if (drag.displayMode === "layer") onLayerPositionCommit?.();
       } : undefined}
-      onPointerCancel={editing ? () => { manualDrag.current = null; } : undefined}
+      onPointerCancel={editing ? () => {
+        if (manualDrag.current?.displayMode === "layer") onLayerPositionCommit?.();
+        manualDrag.current = null;
+      } : undefined}
       onKeyDownCapture={editing ? (event) => {
         if (event.key !== "Enter" && event.key !== " ") return;
         const element = editableSlotElement(event.target);

@@ -2,7 +2,11 @@ import Link from "next/link";
 import { CtaBanner } from "@/components/public/cta-banner";
 import { MediaPlaceholder } from "@/components/public/media-placeholder";
 import type { PortfolioItem } from "@/content/public-site";
-import { photographyCaseStudyMediaSlotId, type PhotographyCaseStudySlug } from "@/lib/photography-case-studies";
+import {
+  photographyCaseStudyMediaSlotId,
+  type PhotographyCaseStudyMediaPosition,
+  type PhotographyCaseStudySlug,
+} from "@/lib/photography-case-studies";
 
 export function PlaceholderCaseStudy({
   item,
@@ -11,9 +15,9 @@ export function PlaceholderCaseStudy({
   item: PortfolioItem;
   editableProjectMedia?: boolean;
 }) {
-  const projectMediaSlot = editableProjectMedia
-    ? photographyCaseStudyMediaSlotId(item.slug as PhotographyCaseStudySlug)
-    : undefined;
+  const slug = item.slug as PhotographyCaseStudySlug;
+  const mediaSlot = (position: PhotographyCaseStudyMediaPosition) =>
+    editableProjectMedia ? photographyCaseStudyMediaSlotId(slug, position) : undefined;
 
   return (
     <main id="main-content" className={`project-page project-page--${item.mediaType}`}>
@@ -27,7 +31,7 @@ export function PlaceholderCaseStudy({
           </div>
           <MediaPlaceholder
             item={item}
-            slotId={projectMediaSlot}
+            slotId={mediaSlot("project-media")}
             slotLabel={`${item.title} project image`}
           />
         </div>
@@ -53,8 +57,16 @@ export function PlaceholderCaseStudy({
         <div className="public-container">
           <p className="public-kicker">Supporting media</p>
           <div className="project-support__grid">
-            <MediaPlaceholder item={{ ...item, format: "square" }} />
-            <MediaPlaceholder item={{ ...item, format: "landscape" }} />
+            <MediaPlaceholder
+              item={{ ...item, format: "square" }}
+              slotId={mediaSlot("supporting-media-1")}
+              slotLabel={`${item.title} supporting media 1`}
+            />
+            <MediaPlaceholder
+              item={{ ...item, format: "landscape" }}
+              slotId={mediaSlot("supporting-media-2")}
+              slotLabel={`${item.title} supporting media 2`}
+            />
           </div>
           <p className="replacement-note">Replace these blocks with approved supporting media and descriptive alt text.</p>
         </div>

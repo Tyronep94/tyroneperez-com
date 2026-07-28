@@ -14,6 +14,11 @@ export type WebsiteSlotLayout = {
   /** "cover" is a legacy persisted value and is rendered as natural proportions. */
   objectFit?: "contain" | "cover" | "manual";
   objectPosition?: string;
+  displayMode?: "fit" | "layer";
+  zoom?: number;
+  positionX?: number;
+  positionY?: number;
+  /** Legacy Layer Mode values retained for existing saved documents. */
   manualZoom?: number;
   manualX?: number;
   manualY?: number;

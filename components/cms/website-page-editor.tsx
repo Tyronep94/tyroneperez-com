@@ -54,6 +54,7 @@ export function WebsitePageEditor({
   const [integrityIssues, setIntegrityIssues] = useState(initialIntegrityIssues);
   const [busy, startTransition] = useTransition();
   const initialized = useRef(false);
+  const layerDragStart = useRef<{ slotId: string; document: WebsitePageDocument } | null>(null);
   const page = websitePageMeta[pageKey];
 
   const selectedOverride = selected ? document.slots[selected.id] : undefined;
@@ -71,6 +72,11 @@ export function WebsitePageEditor({
     && isPhotographyCaseStudyMediaSlot(selected.id);
   const selectedUsesRichMedia = selected?.type === "media"
     && (pageKey === "portfolio" || selectedIsFeaturedSoundAudio || selectedIsFeaturedSoundImage || selectedIsAboutPortrait || selectedIsPhotographyCaseStudyImage);
+  const selectedDisplayMode = selectedOverride?.layout?.displayMode
+    ?? (selectedOverride?.layout?.objectFit === "manual" ? "layer" : "fit");
+  const selectedZoom = Math.max(1, Math.min(4, selectedOverride?.layout?.zoom ?? selectedOverride?.layout?.manualZoom ?? 1));
+  const selectedPositionX = Math.max(0, Math.min(100, selectedOverride?.layout?.positionX ?? ((selectedOverride?.layout?.manualX ?? 0) + 50)));
+  const selectedPositionY = Math.max(0, Math.min(100, selectedOverride?.layout?.positionY ?? ((selectedOverride?.layout?.manualY ?? 0) + 50)));
   const filteredAssets = useMemo(() => assets.filter((asset) =>
     asset.kind === "image" && `${asset.title} ${asset.filename}`.toLowerCase().includes(query.toLowerCase()),
   ), [assets, query]);
@@ -117,6 +123,10 @@ export function WebsitePageEditor({
         ...selectedOverride?.layout,
         objectFit: "contain",
         objectPosition: "center",
+        displayMode: "fit",
+        zoom: 1,
+        positionX: 50,
+        positionY: 50,
         manualZoom: 1,
         manualX: 0,
         manualY: 0,
@@ -156,6 +166,39 @@ export function WebsitePageEditor({
     }));
     setSaveState("unsaved");
   }, [selected]);
+
+  const beginLayerPosition = useCallback(() => {
+    if (!selected) return;
+    layerDragStart.current = { slotId: selected.id, document: clone(document) };
+  }, [document, selected]);
+
+  const updateLayerPositionLive = useCallback((patch: Pick<WebsiteSlotLayout, "positionX" | "positionY">) => {
+    if (!selected) return;
+    setDocument((current) => ({
+      ...current,
+      slots: {
+        ...current.slots,
+        [selected.id]: {
+          text: selected.text,
+          href: selected.href,
+          alt: selected.alt,
+          ...current.slots[selected.id],
+          id: selected.id,
+          type: selected.type,
+          layout: { ...current.slots[selected.id]?.layout, ...patch },
+        },
+      },
+    }));
+    setSaveState("unsaved");
+  }, [selected]);
+
+  const commitLayerPosition = useCallback(() => {
+    const start = layerDragStart.current;
+    layerDragStart.current = null;
+    if (!start || start.slotId !== selected?.id) return;
+    setUndoStack((history) => [...history, start.document].slice(-50));
+    setRedoStack([]);
+  }, [selected?.id]);
 
   const restoreSelectedContent = () => {
     if (!selected) return;
@@ -333,7 +376,25 @@ export function WebsitePageEditor({
                 <input className="input" value={selectedOverride?.layout?.[field] ?? ""} placeholder="e.g. 80% or 32px" onChange={(event) => updateLayout({ [field]: event.target.value })} />
               </label>)}
               <label className="field"><span>Text alignment</span><select className="input" value={selectedOverride?.layout?.textAlign ?? ""} onChange={(event) => updateLayout({ textAlign: (event.target.value || undefined) as WebsiteSlotLayout["textAlign"] })}><option value="">Template default</option><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>
-              {selected.type === "media" && <>
+              {selected.type === "media" && selectedIsPhotographyCaseStudyImage && selectedOverride?.asset && <>
+                <fieldset className="website-display-mode">
+                  <legend>Display Mode</legend>
+                  <label><input type="radio" name="display-mode" checked={selectedDisplayMode === "fit"} onChange={() => updateLayout({ displayMode: "fit", objectFit: "contain" })} /> Fit Mode <small>No crop</small></label>
+                  <label><input type="radio" name="display-mode" checked={selectedDisplayMode === "layer"} onChange={() => updateLayout({ displayMode: "layer", objectFit: "manual", zoom: selectedZoom, positionX: selectedPositionX, positionY: selectedPositionY })} /> Layer Mode</label>
+                </fieldset>
+                {selectedDisplayMode === "layer" && <div className="website-manual-crop">
+                  <p>Drag the photo in the preview or use the controls below.</p>
+                  <label className="field"><span>Zoom · {Math.round(selectedZoom * 100)}%</span><input aria-label="Layer zoom" type="range" min="1" max="4" step="0.05" value={selectedZoom} onChange={(event) => updateLayout({ zoom: Number(event.target.value) })} /></label>
+                  <div className="website-manual-crop__zoom-buttons">
+                    <button type="button" aria-label="Zoom out" onClick={() => updateLayout({ zoom: Math.max(1, Number((selectedZoom - 0.1).toFixed(2))) })}>Zoom out</button>
+                    <button type="button" aria-label="Zoom in" onClick={() => updateLayout({ zoom: Math.min(4, Number((selectedZoom + 0.1).toFixed(2))) })}>Zoom in</button>
+                  </div>
+                  <label className="field"><span>Horizontal position · {Math.round(selectedPositionX)}%</span><input aria-label="Horizontal image position" type="range" min="0" max="100" value={selectedPositionX} onChange={(event) => updateLayout({ positionX: Number(event.target.value) })} /></label>
+                  <label className="field"><span>Vertical position · {Math.round(selectedPositionY)}%</span><input aria-label="Vertical image position" type="range" min="0" max="100" value={selectedPositionY} onChange={(event) => updateLayout({ positionY: Number(event.target.value) })} /></label>
+                  <button type="button" onClick={() => updateLayout({ zoom: 1, positionX: 50, positionY: 50 })}>Reset Position</button>
+                </div>}
+              </>}
+              {selected.type === "media" && !selectedIsPhotographyCaseStudyImage && <>
                 <fieldset className="website-display-mode">
                   <legend>Display Mode</legend>
                   <label><input type="radio" name="display-mode" checked={selectedOverride?.layout?.objectFit !== "manual"} onChange={() => updateLayout({ objectFit: "contain", objectPosition: "center", manualZoom: 1, manualX: 0, manualY: 0 })} /> Original Proportions <small>No crop</small></label>
@@ -354,7 +415,18 @@ export function WebsitePageEditor({
         <section className="website-page-editor__stage">
           <div className="website-page-editor__page public-site">
             <SiteHeader />
-            <PageRuntime pageKey={pageKey} slotNamespace={slotNamespace} document={document} editing selectedId={selected?.id ?? null} onSelect={setSelected} onManualCropPosition={updateManualCropLive}>
+            <PageRuntime
+              pageKey={pageKey}
+              slotNamespace={slotNamespace}
+              document={document}
+              editing
+              selectedId={selected?.id ?? null}
+              onSelect={setSelected}
+              onManualCropPosition={updateManualCropLive}
+              onLayerPositionStart={beginLayerPosition}
+              onLayerPositionChange={updateLayerPositionLive}
+              onLayerPositionCommit={commitLayerPosition}
+            >
               {children}
             </PageRuntime>
             <SiteFooter />
