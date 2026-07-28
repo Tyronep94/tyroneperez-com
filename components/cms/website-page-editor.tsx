@@ -48,14 +48,18 @@ export function WebsitePageEditor({
   const page = websitePageMeta[pageKey];
 
   const selectedOverride = selected ? document.slots[selected.id] : undefined;
-  const selectedIsFeaturedSound = pageKey === "music"
+  const selectedIsFeaturedSoundAudio = pageKey === "music"
     && selected?.type === "media"
-    && selected.id.startsWith("music.featured-sound.");
+    && selected.id.startsWith("music.featured-sound.")
+    && selected.id !== "music.featured-sound.image";
+  const selectedIsFeaturedSoundImage = pageKey === "music"
+    && selected?.type === "media"
+    && selected.id === "music.featured-sound.image";
   const selectedIsAboutPortrait = pageKey === "about"
     && selected?.type === "media"
     && selected.id === "about.portrait";
   const selectedUsesRichMedia = selected?.type === "media"
-    && (pageKey === "portfolio" || selectedIsFeaturedSound || selectedIsAboutPortrait);
+    && (pageKey === "portfolio" || selectedIsFeaturedSoundAudio || selectedIsFeaturedSoundImage || selectedIsAboutPortrait);
   const filteredAssets = useMemo(() => assets.filter((asset) =>
     asset.kind === "image" && `${asset.title} ${asset.filename}`.toLowerCase().includes(query.toLowerCase()),
   ), [assets, query]);
@@ -282,8 +286,8 @@ export function WebsitePageEditor({
                 override={selectedOverride}
                 imageAssets={imageAssets}
                 audioAssets={audioAssets}
-                audioOnly={selectedIsFeaturedSound}
-                imageOnly={selectedIsAboutPortrait}
+                audioOnly={selectedIsFeaturedSoundAudio}
+                imageOnly={selectedIsFeaturedSoundImage || selectedIsAboutPortrait}
                 onUpdate={updateSelected}
                 onRestore={restoreSelectedContent}
               />}

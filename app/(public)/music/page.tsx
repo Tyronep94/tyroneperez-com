@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CtaBanner } from "@/components/public/cta-banner";
 import { PageRuntime } from "@/components/public/page-runtime";
+import { FeaturedSoundImage } from "@/components/public/featured-sound-image";
 import { FeaturedSoundList } from "@/components/public/featured-sound-list";
 import { TemplateImage } from "@/components/public/template-image";
 import { ServiceList } from "@/components/public/service-list";
@@ -67,14 +68,7 @@ export function MusicPageView() {
             <Link href="/portfolio" className="service-inline-link">View portfolio <span aria-hidden="true">→</span></Link>
           </header>
           <div className="music-project-grid">
-            <div className="music-project-grid__image" data-media-container>
-              <TemplateImage
-                src="/images/home-hero.png"
-                alt="Music producer listening in a dark studio"
-                width={1672}
-                height={941}
-              />
-            </div>
+            <FeaturedSoundImage />
             <FeaturedSoundList items={musicWork} />
           </div>
         </div>

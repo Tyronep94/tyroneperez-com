@@ -2419,6 +2419,7 @@
   position: absolute;
   inset: 0;
   content: "";
+  pointer-events: none;
   background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,.28));
 }
 .music-project-grid__image img {

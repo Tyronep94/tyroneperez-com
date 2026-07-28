@@ -49,12 +49,14 @@ export function WebsiteSlotMediaControls({
   onUpdate: (patch: Partial<WebsiteSlotOverride>) => void;
   onRestore: () => void;
 }) {
-  const fileInput = useRef<HTMLInputElement>(null);
+  const audioFileInput = useRef<HTMLInputElement>(null);
+  const imageFileInput = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<ChangeMode>(null);
   const [query, setQuery] = useState("");
   const [spotifyUrl, setSpotifyUrl] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [localImageAssets, setLocalImageAssets] = useState(imageAssets);
   const [localAudioAssets, setLocalAudioAssets] = useState(audioAssets);
   const mediaType = override?.media_type
     ?? (override?.audio_asset_id ? "uploaded_audio" : override?.spotify_url ? "spotify" : audioOnly ? null : "image");
@@ -95,6 +97,56 @@ export function WebsiteSlotMediaControls({
     setMode(null);
   };
 
+  const uploadImage = async (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Choose an image file.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    const objectUrl = URL.createObjectURL(file);
+    try {
+      const image = new window.Image();
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error("Image dimensions could not be read."));
+        image.src = objectUrl;
+      });
+      const width = image.naturalWidth;
+      const height = image.naturalHeight;
+      const supabase = createClient();
+      const safeName = file.name.toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
+      const path = `${new Date().getFullYear()}/${crypto.randomUUID()}-${safeName}`;
+      const uploaded = await supabase.storage.from("cms-media").upload(path, file, { cacheControl: "31536000", upsert: false });
+      if (uploaded.error) throw new Error(uploaded.error.message);
+      const { data } = supabase.storage.from("cms-media").getPublicUrl(path);
+      const registered = await registerMedia({
+        storage_path: path,
+        public_url: data.publicUrl,
+        title: file.name.replace(/\.[^.]+$/, ""),
+        filename: file.name,
+        alt_text: null,
+        mime_type: file.type,
+        file_size: file.size,
+        width,
+        height,
+        aspect_ratio: width / height,
+        orientation: width === height ? "square" : width > height ? "landscape" : "portrait",
+      });
+      if (!registered.ok || !registered.asset) throw new Error(registered.message ?? "Image metadata could not be saved.");
+      const asset = registered.asset as MediaAsset;
+      setLocalImageAssets((current) => [asset, ...current]);
+      chooseImage(asset);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Image could not be uploaded.");
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+      setLoading(false);
+      if (imageFileInput.current) imageFileInput.current.value = "";
+    }
+  };
+
   const uploadAudio = async (file?: File) => {
     if (!file) return;
     if (!file.type.startsWith("audio/")) {
@@ -131,7 +183,7 @@ export function WebsiteSlotMediaControls({
       setError(reason instanceof Error ? reason.message : "Audio could not be uploaded.");
     } finally {
       setLoading(false);
-      if (fileInput.current) fileInput.current.value = "";
+      if (audioFileInput.current) audioFileInput.current.value = "";
     }
   };
 
@@ -156,7 +208,7 @@ export function WebsiteSlotMediaControls({
     setMode(null);
   };
 
-  const filteredImages = imageAssets.filter((asset) =>
+  const filteredImages = localImageAssets.filter((asset) =>
     `${asset.title} ${asset.filename}`.toLowerCase().includes(query.toLowerCase()),
   );
 
@@ -185,7 +237,11 @@ export function WebsiteSlotMediaControls({
       </div>}
 
       {mode === "image" && <div className="website-card-media-panel">
-        <h3>Choose from Media Library</h3>
+        <h3>Media Library</h3>
+        <input ref={imageFileInput} type="file" accept="image/*" hidden onChange={(event) => void uploadImage(event.target.files?.[0])} />
+        <button type="button" className="btn" disabled={loading} onClick={() => imageFileInput.current?.click()}>
+          {loading ? "Uploading…" : "Upload image"}
+        </button>
         <label className="field"><span>Find an image</span><input className="input" type="search" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
         <div className="website-page-editor__media-grid">
           {filteredImages.slice(0, 80).map((asset) => <button type="button" key={asset.id} onClick={() => chooseImage(asset)}>
@@ -193,12 +249,13 @@ export function WebsiteSlotMediaControls({
             <span>{asset.title}</span>
           </button>)}
         </div>
+        {error && <p className="notice notice-error" role="alert">{error}</p>}
         <button type="button" className="cms-text-button" onClick={() => setMode(imageOnly ? null : "choose")}>Cancel</button>
       </div>}
 
       {mode === "uploaded_audio" && <div className="website-card-media-panel">
-        <input ref={fileInput} type="file" accept="audio/*" hidden onChange={(event) => void uploadAudio(event.target.files?.[0])} />
-        <button type="button" className="btn" disabled={loading} onClick={() => fileInput.current?.click()}>{loading ? "Uploading…" : "Choose audio file"}</button>
+        <input ref={audioFileInput} type="file" accept="audio/*" hidden onChange={(event) => void uploadAudio(event.target.files?.[0])} />
+        <button type="button" className="btn" disabled={loading} onClick={() => audioFileInput.current?.click()}>{loading ? "Uploading…" : "Choose audio file"}</button>
         {localAudioAssets.length > 0 && <label className="field"><span>Existing audio</span><select className="input" defaultValue="" onChange={(event) => {
           const asset = localAudioAssets.find((candidate) => candidate.id === event.target.value);
           if (asset) chooseUploadedAudio(asset);
@@ -234,7 +291,7 @@ export function WebsiteSlotMediaControls({
       </>}
 
       {audioOnly && audioMedia && <button type="button" className="website-slot-layout__reset" onClick={onRestore}>Remove media</button>}
-      {imageOnly && override?.assetId && <button type="button" className="website-slot-layout__reset" onClick={onRestore}>Remove override / Restore placeholder</button>}
+      {imageOnly && override?.assetId && <button type="button" className="website-slot-layout__reset" onClick={onRestore}>Restore placeholder</button>}
       {mediaType === "image" && <label className="field"><span>Alt text</span><textarea className="input" value={override?.alt ?? selected.alt ?? ""} onChange={(event) => onUpdate({ alt: event.target.value })} /></label>}
     </div>
   );
