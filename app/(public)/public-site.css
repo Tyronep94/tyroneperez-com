@@ -441,6 +441,16 @@
   text-transform: uppercase;
 }
 .editorial-media__mark { z-index: 2; display: flex; align-items: center; justify-content: center; gap: 7px; }
+.editorial-media__image {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  object-fit: contain;
+  object-position: center;
+}
 .media-audio .editorial-media__mark i { width: 2px; height: 28px; display: block; background: currentColor; }
 .media-audio .editorial-media__mark i:nth-child(2) { height: 64px; }
 .media-audio .editorial-media__mark i:nth-child(3) { height: 42px; }

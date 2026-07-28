@@ -17,7 +17,7 @@ test("Featured Sound image routes to image controls while sound buttons remain a
   const source = await read("components/cms/website-page-editor.tsx");
   assert.match(source, /selected\.id === "music\.featured-sound\.image"/);
   assert.match(source, /selected\.id !== "music\.featured-sound\.image"/);
-  assert.match(source, /imageOnly=\{selectedIsFeaturedSoundImage \|\| selectedIsAboutPortrait\}/);
+  assert.match(source, /imageOnly=\{selectedIsFeaturedSoundImage \|\| selectedIsAboutPortrait \|\| selectedIsPhotographyCaseStudyImage\}/);
   assert.match(source, /audioOnly=\{selectedIsFeaturedSoundAudio\}/);
 });
 

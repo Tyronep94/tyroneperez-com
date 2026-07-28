@@ -8,6 +8,7 @@ import { inspectWebsiteDocumentMedia } from "@/lib/media-integrity";
 import { websitePageMeta, websitePageKeys, type WebsitePageDocument, type WebsitePageKey } from "@/types/website-editor";
 import { isApprovedSpotifyUrl, parseSpotifyEmbedUrl, sanitizeSpotifyThumbnail } from "@/lib/spotify";
 import { validateSpotifyUrlWithOEmbed } from "@/lib/spotify-oembed";
+import { photographyCaseStudyEditors } from "@/lib/photography-case-studies";
 
 const cssValue = z.string().max(80).regex(/^[a-z0-9.%(),\s+\-/]*$/i).optional();
 const layoutSchema = z.object({
@@ -181,6 +182,9 @@ export async function publishWebsitePage(pageKey: WebsitePageKey, input: Website
       updated_by: admin.id,
     });
     revalidatePath(websitePageMeta[pageKey].path);
+    if (pageKey === "photography") {
+      for (const item of photographyCaseStudyEditors) revalidatePath(`/portfolio/${item.slug}`);
+    }
     revalidatePath(`/admin/pages/${pageKey}`);
   }
   return error ? { ok: false, message: error.message } : { ok: true };

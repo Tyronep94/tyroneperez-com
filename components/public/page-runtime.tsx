@@ -239,6 +239,7 @@ function restoreOriginalState(element: HTMLElement, original: OriginalElementSta
 
 export function PageRuntime({
   pageKey,
+  slotNamespace,
   document,
   editing = false,
   selectedId = null,
@@ -247,6 +248,7 @@ export function PageRuntime({
   children,
 }: {
   pageKey: WebsitePageKey;
+  slotNamespace?: string;
   document: WebsitePageDocument;
   editing?: boolean;
   selectedId?: string | null;
@@ -286,7 +288,7 @@ export function PageRuntime({
       if (element.closest("[data-page-editor-ignore]")) continue;
       const type = slotType(element);
       const index = counters[type]++;
-      const id = element.dataset.pageMediaSlot ?? element.dataset.pageSlotId ?? `${pageKey}.${type}.${String(index + 1).padStart(2, "0")}`;
+      const id = element.dataset.pageMediaSlot ?? element.dataset.pageSlotId ?? `${slotNamespace ?? pageKey}.${type}.${String(index + 1).padStart(2, "0")}`;
       element.dataset.pageSlot = id;
       element.dataset.pageSlotType = type;
       if (editing) {
@@ -342,7 +344,7 @@ export function PageRuntime({
       }
       element.classList.toggle("is-page-slot-selected", selectedId === id);
     }
-  }, [document, editing, pageKey, selectedId]);
+  }, [document, editing, pageKey, selectedId, slotNamespace]);
 
   return (
     <div

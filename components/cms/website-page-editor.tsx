@@ -9,6 +9,7 @@ import { SiteFooter } from "@/components/public/site-footer";
 import { SiteHeader } from "@/components/public/site-header";
 import type { MediaAsset } from "@/types/cms";
 import type { MediaIntegrityIssue } from "@/lib/media-integrity";
+import { isPhotographyCaseStudyMediaSlot, photographyCaseStudyEditors } from "@/lib/photography-case-studies";
 import { WebsiteSlotMediaControls } from "@/components/cms/website-slot-media-controls";
 import {
   websitePageMeta,
@@ -26,12 +27,20 @@ export function WebsitePageEditor({
   initialDocument,
   initialIntegrityIssues,
   assets,
+  title,
+  previewPath,
+  publishedPath,
+  slotNamespace,
   children,
 }: {
   pageKey: WebsitePageKey;
   initialDocument: WebsitePageDocument;
   initialIntegrityIssues: MediaIntegrityIssue[];
   assets: MediaAsset[];
+  title?: string;
+  previewPath?: string;
+  publishedPath?: string;
+  slotNamespace?: string;
   children: ReactNode;
 }) {
   const [document, setDocument] = useState(() => clone(initialDocument));
@@ -58,8 +67,10 @@ export function WebsitePageEditor({
   const selectedIsAboutPortrait = pageKey === "about"
     && selected?.type === "media"
     && selected.id === "about.portrait";
+  const selectedIsPhotographyCaseStudyImage = selected?.type === "media"
+    && isPhotographyCaseStudyMediaSlot(selected.id);
   const selectedUsesRichMedia = selected?.type === "media"
-    && (pageKey === "portfolio" || selectedIsFeaturedSoundAudio || selectedIsFeaturedSoundImage || selectedIsAboutPortrait);
+    && (pageKey === "portfolio" || selectedIsFeaturedSoundAudio || selectedIsFeaturedSoundImage || selectedIsAboutPortrait || selectedIsPhotographyCaseStudyImage);
   const filteredAssets = useMemo(() => assets.filter((asset) =>
     asset.kind === "image" && `${asset.title} ${asset.filename}`.toLowerCase().includes(query.toLowerCase()),
   ), [assets, query]);
@@ -220,7 +231,7 @@ export function WebsitePageEditor({
       <header className="website-page-editor__topbar" data-page-editor-ignore>
         <div>
           <Link href="/admin">← Pages</Link>
-          <strong>{page.label}</strong>
+          <strong>{title ?? page.label}</strong>
           <span className={`visual-save-state visual-save-state--${saveState}`}>
             {saveState === "saving" ? "Saving…" : saveState === "unsaved" ? "Unsaved changes" : saveState === "error" ? "Save failed" : "Draft saved"}
           </span>
@@ -235,8 +246,8 @@ export function WebsitePageEditor({
             <button onClick={redo} disabled={!redoStack.length} aria-label="Redo last page change">Redo</button>
           </span>
           <button onClick={() => void save()} disabled={busy}>Save draft</button>
-          <Link href={`/preview/pages/${pageKey}`} target="_blank">Private preview ↗</Link>
-          <Link href={page.path} target="_blank">View published ↗</Link>
+          <Link href={previewPath ?? `/preview/pages/${pageKey}`} target="_blank">Private preview ↗</Link>
+          <Link href={publishedPath ?? page.path} target="_blank">View published ↗</Link>
           <button className="website-page-editor__publish" onClick={publish} disabled={busy}>Publish</button>
         </div>
       </header>
@@ -257,6 +268,15 @@ export function WebsitePageEditor({
             <p>{mode === "content"
               ? "Headings, text, buttons, links, and images reveal an Edit affordance when you hover."
               : "Layout changes apply only to the selected element. Content remains unchanged."}</p>
+            {pageKey === "photography" && !slotNamespace && <div className="website-page-editor__case-studies">
+              <h3>Photography case studies</h3>
+              <p>Open a destination page to replace its project image.</p>
+              {photographyCaseStudyEditors.map((item) => (
+                <Link key={item.slug} href={`/admin/pages/photography/case-studies/${item.slug}`}>
+                  <span>{item.label}</span><b aria-hidden="true">Edit →</b>
+                </Link>
+              ))}
+            </div>}
           </div>}
           {selected && <div className="website-slot-inspector">
             <div className="website-slot-inspector__heading">
@@ -287,7 +307,7 @@ export function WebsitePageEditor({
                 imageAssets={imageAssets}
                 audioAssets={audioAssets}
                 audioOnly={selectedIsFeaturedSoundAudio}
-                imageOnly={selectedIsFeaturedSoundImage || selectedIsAboutPortrait}
+                imageOnly={selectedIsFeaturedSoundImage || selectedIsAboutPortrait || selectedIsPhotographyCaseStudyImage}
                 onUpdate={updateSelected}
                 onRestore={restoreSelectedContent}
               />}
@@ -334,7 +354,7 @@ export function WebsitePageEditor({
         <section className="website-page-editor__stage">
           <div className="website-page-editor__page public-site">
             <SiteHeader />
-            <PageRuntime pageKey={pageKey} document={document} editing selectedId={selected?.id ?? null} onSelect={setSelected} onManualCropPosition={updateManualCropLive}>
+            <PageRuntime pageKey={pageKey} slotNamespace={slotNamespace} document={document} editing selectedId={selected?.id ?? null} onSelect={setSelected} onManualCropPosition={updateManualCropLive}>
               {children}
             </PageRuntime>
             <SiteFooter />
